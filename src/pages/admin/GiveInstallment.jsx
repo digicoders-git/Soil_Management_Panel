@@ -11,7 +11,7 @@ const GiveInstallment = () => {
   const [installments, setInstallments] = useState([]);
   const [siteSupervisors, setSiteSupervisors] = useState([]);
   const [filterSiteId, setFilterSiteId] = useState('all');
-  const [formData, setFormData] = useState({ siteId: '', receivedBy: '', amount: '', note: '' });
+  const [formData, setFormData] = useState({ siteId: '', receivedBy: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] });
 
   useEffect(() => {
     fetchSites();
@@ -53,7 +53,7 @@ const GiveInstallment = () => {
     if (!formData.receivedBy) return alert('Please select a supervisor.');
     try {
       await api.post('/installments', formData);
-      setFormData({ siteId: '', receivedBy: '', amount: '', note: '' });
+      setFormData({ siteId: '', receivedBy: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] });
       setSiteSupervisors([]);
       fetchInstallments();
     } catch (error) {
@@ -170,6 +170,7 @@ const GiveInstallment = () => {
               </div>
             )}
             <FormInput label="Amount" type="number" name="amount" value={formData.amount} onChange={handleChange} placeholder="Enter amount" required />
+            <FormInput label="Date" type="date" name="date" value={formData.date} onChange={handleChange} required />
             <FormInput label="Note" type="textarea" name="note" value={formData.note} onChange={handleChange} placeholder="Additional notes" />
             <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
               Give Installment

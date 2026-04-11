@@ -18,6 +18,7 @@ const InchargeDetails = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isChallanFormOpen, setIsChallanFormOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [assignForm, setAssignForm] = useState({ unitIds: [], operatorId: '', quantity: 1 });
   const [challanDetails, setChallanDetails] = useState({
     consignorName: 'Arun Soil Lab Private Limited',
@@ -395,39 +396,51 @@ const InchargeDetails = () => {
         )}
       </div>
 
-      <Modal isOpen={isAssignModalOpen} onClose={() => { setIsAssignModalOpen(false); setAssignForm({ unitIds: [], operatorId: '' }); }} title="Assign Machine Units">
+      <Modal isOpen={isAssignModalOpen} onClose={() => { setIsAssignModalOpen(false); setAssignForm({ unitIds: [], operatorId: '' }); setSearchTerm(''); }} title="Assign Machine Units">
         <form onSubmit={handleAssignMachine}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Select Units to Assign</label>
-            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar border border-gray-200 rounded-lg p-3 bg-gray-50">
-              {availableMachines.length > 0 ? availableMachines.map(m => (
-                <label key={m._id} className={`flex items-start p-3 rounded-lg border cursor-pointer transition-colors ${assignForm.unitIds.includes(m._id) ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                  <div className="flex-shrink-0 mt-0.5">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded cursor-pointer"
-                      checked={assignForm.unitIds.includes(m._id)}
-                      onChange={(e) => {
-                        const newSelection = e.target.checked
-                          ? [...assignForm.unitIds, m._id]
-                          : assignForm.unitIds.filter(uid => uid !== m._id);
-                        setAssignForm({ ...assignForm, unitIds: newSelection });
-                      }}
-                    />
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className={`text-sm font-medium ${assignForm.unitIds.includes(m._id) ? 'text-indigo-900' : 'text-gray-900'}`}>{m.machineTypeId?.name}</p>
-                    <p className={`text-xs ${assignForm.unitIds.includes(m._id) ? 'text-indigo-700' : 'text-gray-500'}`}>
-                      Serial: <span className="font-mono">{m.serialNumber}</span> • Cond: <span className="capitalize">{m.condition}</span>
-                    </p>
-                  </div>
-                </label>
-              )) : (
-                <p className="text-sm text-gray-500 text-center py-4">No available machines.</p>
-              )}
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Search by name or serial no..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <label className="block text-sm font-medium text-gray-700 mb-3">Select Units to Assign</label>
+              <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar border border-gray-200 rounded-lg p-3 bg-gray-50">
+                {availableMachines.filter(m =>
+                  m.machineTypeId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  m.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+                ).length > 0 ? availableMachines.filter(m =>
+                  m.machineTypeId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  m.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+                ).map(m => (
+                  <label key={m._id} className={`flex items-start p-3 rounded-lg border cursor-pointer transition-colors ${assignForm.unitIds.includes(m._id) ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                    <div className="flex-shrink-0 mt-0.5">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 text-indigo-600 border-gray-300 rounded cursor-pointer"
+                        checked={assignForm.unitIds.includes(m._id)}
+                        onChange={(e) => {
+                          const newSelection = e.target.checked
+                            ? [...assignForm.unitIds, m._id]
+                            : assignForm.unitIds.filter(uid => uid !== m._id);
+                          setAssignForm({ ...assignForm, unitIds: newSelection });
+                        }}
+                      />
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <p className={`text-sm font-medium ${assignForm.unitIds.includes(m._id) ? 'text-indigo-900' : 'text-gray-900'}`}>{m.machineTypeId?.name}</p>
+                      <p className={`text-xs ${assignForm.unitIds.includes(m._id) ? 'text-indigo-700' : 'text-gray-500'}`}>
+                        Serial: <span className="font-mono">{m.serialNumber}</span> • Cond: <span className="capitalize">{m.condition}</span>
+                      </p>
+                    </div>
+                  </label>
+                )) : (
+                  <p className="text-sm text-gray-500 text-center py-4">No matching machines found.</p>
+                )}
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-right">{assignForm.unitIds.length} item(s) selected</p>
-          </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Assign Operator <span className="text-red-500">*</span></label>
             <select
