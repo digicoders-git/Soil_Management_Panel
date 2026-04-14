@@ -54,8 +54,10 @@ const SiteWork = () => {
   });
 
   useEffect(() => {
-    fetchSiteData();
-  }, [id]);
+    if (id && user?._id) {
+      fetchSiteData();
+    }
+  }, [id, user?._id]);
 
   const fetchSiteData = async () => {
     try {

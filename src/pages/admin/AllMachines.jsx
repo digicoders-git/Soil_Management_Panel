@@ -11,6 +11,7 @@ const Allmachines = () => {
     const [stockFilter, setStockFilter] = useState('all'); // 'all' | 'new' | 'old'
     const [selectedMonth, setSelectedMonth] = useState('');
     const [selectedYear, setSelectedYear] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchData();
@@ -51,6 +52,7 @@ const Allmachines = () => {
 
     const summary = useMemo(() => {
         return types.map(type => {
+
             const typeUnits = filteredUnits.filter(u => u.machineTypeId && u.machineTypeId._id === type._id);
             if (typeUnits.length === 0) return null;
             const availableUnits = typeUnits.filter(u => u.status === 'available').length;
@@ -65,8 +67,11 @@ const Allmachines = () => {
                 assignedQuantity: assignedUnits,
                 repairQuantity: repairUnits,
             };
-        }).filter(Boolean);
-    }, [types, filteredUnits]);
+        }).filter(Boolean).filter(item =>
+            !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (item.category && item.category.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+    }, [types, filteredUnits, searchQuery]);
 
     const columns = [
         { key: 'name', label: 'Stock Type' },
@@ -81,16 +86,25 @@ const Allmachines = () => {
         setSelectedMonth('');
         setSelectedYear('');
         setStockFilter('all');
+        setSearchQuery('');
     };
 
     return (
         <DashboardLayout>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">All Stocks Overview</h1>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Stocks Overview</h1>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-4 items-center">
+            <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4 flex flex-wrap gap-2 sm:gap-4 items-center">
+                {/* Search */}
+                <input
+                    type="text"
+                    placeholder="Search by name or category..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-56"
+                />
                 {/* New / Old tabs */}
                 <div className="flex rounded-lg border border-gray-200 overflow-hidden">
                     {['all', 'new', 'old'].map(f => (
@@ -128,7 +142,7 @@ const Allmachines = () => {
                     ))}
                 </select>
 
-                {(stockFilter !== 'all' || selectedMonth || selectedYear) && (
+                {(stockFilter !== 'all' || selectedMonth || selectedYear || searchQuery) && (
                     <button onClick={clearFilters} className="text-sm text-red-500 hover:text-red-700 font-medium">
                         Clear Filters
                     </button>

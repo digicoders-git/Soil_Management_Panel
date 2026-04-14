@@ -91,28 +91,28 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back! Here's what's happening today.</p>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
+          <p className="text-gray-500 mt-1 text-sm">Welcome back! Here's what's happening today.</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2">
           <button 
             onClick={() => navigate('/admin/reports')}
-            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+            className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
           >
             Download Report
           </button>
           <button 
             onClick={() => navigate('/admin/create-site')}
-            className="px-4 py-2 bg-indigo-600 rounded-xl text-sm font-medium text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20"
+            className="px-3 py-2 bg-indigo-600 rounded-xl text-sm font-medium text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20"
           >
             + New Site
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-10">
         <DashboardCard
           title="Total Sites"
           value={stats.totalSites}
@@ -141,9 +141,9 @@ const AdminDashboard = () => {
 
 
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <h2 className="text-xl font-bold text-gray-900">Recent Transactions</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Recent Transactions</h2>
           <button className="text-indigo-600 font-semibold text-sm hover:text-indigo-700">View All Transactions</button>
         </div>
         <DataTable columns={activityColumns} data={recentActivity} />

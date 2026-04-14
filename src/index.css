@@ -21,6 +21,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background);
   color: #1e293b;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 @layer components {

@@ -342,11 +342,10 @@ const MovementList = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Stocks Movements</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Stocks Movements</h1>
         <div className="flex gap-2">
-          {/* <button onClick={() => setIsRequestModalOpen(true)} className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">Request Movement</button> */}
-          <button onClick={() => setIsChallanFormOpen(true)} className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700">Download Challan</button>
+          <button onClick={() => setIsChallanFormOpen(true)} className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 text-sm">Download Challan</button>
         </div>
       </div>
 

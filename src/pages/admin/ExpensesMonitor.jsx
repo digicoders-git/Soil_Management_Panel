@@ -56,11 +56,11 @@ const ExpensesMonitor = () => {
 
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Expenses Monitor</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Expenses Monitor</h1>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <FormInput
             label="Filter by Site"
             type="select"

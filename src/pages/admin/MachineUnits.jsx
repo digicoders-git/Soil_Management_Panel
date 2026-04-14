@@ -10,6 +10,7 @@ const MachineUnits = () => {
     const [types, setTypes] = useState([]);
     const [units, setUnits] = useState([]);
 
+    const [selectedIds, setSelectedIds] = useState([]);
     const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
     const [unitForm, setUnitForm] = useState({ machineTypeId: '', serialNumber: '', purchaseCost: '', purchaseDate: '', condition: 'good', quantity: 1 });
     const [amcDocument, setAmcDocument] = useState(null);
@@ -82,6 +83,26 @@ const MachineUnits = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected units?`)) return;
+        try {
+            await Promise.all(selectedIds.map(id => api.delete(`/machine-units/${id}`)));
+            setSelectedIds([]);
+            fetchData();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to delete some units');
+        }
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const toggleSelectAll = () => {
+        setSelectedIds(prev => prev.length === units.length ? [] : units.map(u => u._id));
+    };
+
     const unitColumns = [
         { key: 'serialNumber', label: 'Serial No.' },
         { key: 'machineTypeId', label: 'Type', render: (val) => val?.name || '-' },
@@ -98,11 +119,59 @@ const MachineUnits = () => {
         <DashboardLayout>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Stocks Units</h1>
-                <button onClick={() => setIsUnitModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Unit</button>
+                <div className="flex gap-3">
+                    {selectedIds.length > 0 && (
+                        <button onClick={handleBulkDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                            Delete Selected ({selectedIds.length})
+                        </button>
+                    )}
+                    <button onClick={() => setIsUnitModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Unit</button>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg shadow">
-                <DataTable columns={unitColumns} data={units} onEdit={handleEdit} onDelete={handleDelete} />
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-100">
+                        <thead>
+                            <tr>
+                                <th className="px-4 py-4">
+                                    <input type="checkbox" checked={units.length > 0 && selectedIds.length === units.length} onChange={toggleSelectAll} className="w-4 h-4 cursor-pointer" />
+                                </th>
+                                {unitColumns.map(col => (
+                                    <th key={col.key} className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col.label}</th>
+                                ))}
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {units.map((unit, index) => (
+                                <tr key={index} className={`hover:bg-gray-50/50 transition-colors ${selectedIds.includes(unit._id) ? 'bg-red-50' : ''}`}>
+                                    <td className="px-4 py-4">
+                                        <input type="checkbox" checked={selectedIds.includes(unit._id)} onChange={() => toggleSelect(unit._id)} className="w-4 h-4 cursor-pointer" />
+                                    </td>
+                                    {unitColumns.map(col => (
+                                        <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            {col.render ? col.render(unit[col.key], unit) : unit[col.key]}
+                                        </td>
+                                    ))}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                        <div className="flex space-x-3">
+                                            <button onClick={() => handleEdit(unit)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Edit">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                            </button>
+                                            <button onClick={() => handleDelete(unit)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg" title="Delete">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {units.length === 0 && (
+                        <div className="text-center py-12 text-gray-400">No records found</div>
+                    )}
+                </div>
             </div>
 
             <Modal isOpen={isUnitModalOpen} onClose={() => { setIsUnitModalOpen(false); setEditingId(null); setAmcDocument(null); setUnitForm({ machineTypeId: '', serialNumber: '', purchaseCost: '', purchaseDate: '', condition: 'good', quantity: 1 }); }} title={editingId ? "Edit Machine Unit" : "Add Machine Unit"}>
