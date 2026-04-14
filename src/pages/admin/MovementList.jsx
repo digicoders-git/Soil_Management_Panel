@@ -75,6 +75,8 @@ const MovementList = () => {
     vehicle: '',
     driverName: '',
     driverContact: '',
+    gstType: 'igst',
+    gstRate: '18',
   });
 
   useEffect(() => {
@@ -237,8 +239,9 @@ const MovementList = () => {
       const grouped = Object.values(
         selectedMachines.reduce((acc, m) => {
           const key = m.machineTypeId?._id || m.machineTypeId || m._id;
-          if (!acc[key]) acc[key] = { ...m, quantity: 1, totalCost: m.purchaseCost || 0 };
-          else { acc[key].quantity += 1; acc[key].totalCost += m.purchaseCost || 0; }
+          const cost = Number(m.purchaseCost) || 0;
+          if (!acc[key]) acc[key] = { ...m, quantity: 1, totalCost: cost };
+          else { acc[key].quantity += 1; acc[key].totalCost += cost; }
           return acc;
         }, {})
       );
@@ -249,16 +252,26 @@ const MovementList = () => {
 
       const totalQty  = grouped.reduce((s, m) => s + m.quantity, 0);
       const totalAmt  = grouped.reduce((s, m) => s + (m.totalCost || 0), 0);
-      const igst      = Math.round(totalAmt * 0.18 * 100) / 100;
-      const netAmount = Math.round((totalAmt + igst) * 100) / 100;
+      const gstType = cd.gstType || 'igst';
+      const gstRate = Number(cd.gstRate || 18) / 100;
+      const cgst = gstType === 'cgst_sgst' ? Math.round(totalAmt * (gstRate / 2) * 100) / 100 : 0;
+      const sgst = gstType === 'cgst_sgst' ? Math.round(totalAmt * (gstRate / 2) * 100) / 100 : 0;
+      const igst = gstType === 'igst' ? Math.round(totalAmt * gstRate * 100) / 100 : 0;
+      const netAmount = Math.round((totalAmt + (gstType === 'none' ? 0 : gstType === 'cgst_sgst' ? cgst + sgst : igst)) * 100) / 100;
 
       const totalsTexts = (baseY) => [
-        { x: 447, y: baseY,      text: totalQty, align: 'center' },
-        { x: 682, y: baseY,      text: totalAmt.toFixed(2), align: 'center' },
-        // { x: 152, y: baseY + 16, text: 'IGST 18%' },
-        { x: 682, y: baseY + 16, text: igst.toFixed(2), align: 'center' },
-        // { x: 152, y: baseY + 32, text: 'Net Amount' },
-        { x: 682, y: baseY + 32, text: netAmount.toFixed(2), align: 'center' },
+        { x: 447, y: baseY, text: totalQty, align: 'center' },
+        { x: 682, y: baseY, text: totalAmt.toFixed(2), align: 'center' },
+        ...(gstType === 'igst' ? [
+          { x: 682, y: baseY + 16, text: igst.toFixed(2), align: 'center' },
+          { x: 682, y: baseY + 32, text: netAmount.toFixed(2), align: 'center' },
+        ] : gstType === 'cgst_sgst' ? [
+          { x: 682, y: baseY + 16, text: cgst.toFixed(2), align: 'center' },
+          { x: 682, y: baseY + 32, text: sgst.toFixed(2), align: 'center' },
+          { x: 682, y: baseY + 48, text: netAmount.toFixed(2), align: 'center' },
+        ] : [
+          { x: 682, y: baseY + 16, text: netAmount.toFixed(2), align: 'center' },
+        ]),
       ];
 
       const page1Texts = [
@@ -323,6 +336,22 @@ const MovementList = () => {
       }
 
       pdf.save(`challan-${challanNo}.pdf`);
+
+      // Save exit challan history
+      if (selectedMachines.length > 0) {
+        await api.post('/movements/exit-challan', {
+          supervisorId: selectedSupervisorId,
+          challanNo,
+          machines: selectedMachines.map(m => ({
+            machineUnitId: m._id,
+            machineTypeName: m.machineTypeId?.name || '',
+            serialNumber: m.serialNumber || '',
+            status: 'returned',
+            remark: ''
+          }))
+        });
+        fetchExitChallans();
+      }
     } catch (err) {
       console.error('PDF generation failed:', err);
       alert('PDF save karne mein error aaya.');
@@ -344,9 +373,6 @@ const MovementList = () => {
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Stocks Movements</h1>
-        <div className="flex gap-2">
-          <button onClick={() => setIsChallanFormOpen(true)} className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 text-sm">Download Challan</button>
-        </div>
       </div>
 
       {/* Tabs */}
@@ -548,6 +574,34 @@ const MovementList = () => {
               />
             </div>
           ))}
+
+          <p className="pt-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">GST Details</p>
+          <div>
+            <label className="block mb-1 text-xs font-medium text-gray-600">GST Type</label>
+            <select
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={challanDetails.gstType}
+              onChange={e => setChallanDetails(p => ({ ...p, gstType: e.target.value }))}
+            >
+              <option value="igst">IGST (Inter-state)</option>
+              <option value="cgst_sgst">CGST + SGST (Intra-state)</option>
+              <option value="none">No GST</option>
+            </select>
+          </div>
+          {challanDetails.gstType !== 'none' && (
+            <div>
+              <label className="block mb-1 text-xs font-medium text-gray-600">GST Rate (%)</label>
+              <select
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={challanDetails.gstRate}
+                onChange={e => setChallanDetails(p => ({ ...p, gstRate: e.target.value }))}
+              >
+                {['0','5','12','18','28'].map(r => (
+                  <option key={r} value={r}>{r}%</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <p className="pt-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">Supervisor & Machines</p>
           <div>

@@ -50,6 +50,7 @@ const SiteDetails = () => {
     suppliersRef: '', othersRef: '', buyersOrderNo: '', buyersOrderDate: '',
     dispatchDocNo: '', dispatchThrough: '', destination: '',
     vehicle: '', driverName: '', driverContact: '',
+    gstType: 'igst', gstRate: '18',
   });
 
   useEffect(() => {
@@ -261,8 +262,9 @@ const SiteDetails = () => {
       const grouped = Object.values(
         challanMachines.reduce((acc, m) => {
           const key = m.machineTypeId?._id || m._id;
-          if (!acc[key]) acc[key] = { ...m, quantity: 1, totalCost: m.purchaseCost || 0 };
-          else { acc[key].quantity += 1; acc[key].totalCost += m.purchaseCost || 0; }
+          const cost = Number(m.purchaseCost) || 0;
+          if (!acc[key]) acc[key] = { ...m, quantity: 1, totalCost: cost };
+          else { acc[key].quantity += 1; acc[key].totalCost += cost; }
           return acc;
         }, {})
       );
@@ -272,16 +274,32 @@ const SiteDetails = () => {
       const rowHeight = 18;
       const totalQty = grouped.reduce((s, m) => s + m.quantity, 0);
       const totalAmt = grouped.reduce((s, m) => s + (m.totalCost || 0), 0);
-      const igst = Math.round(totalAmt * 0.18 * 100) / 100;
-      const netAmount = Math.round((totalAmt + igst) * 100) / 100;
+      const gstType = cd.gstType || 'igst';
+      const gstRate = Number(cd.gstRate || 18) / 100;
+      const cgst = gstType === 'cgst_sgst' ? Math.round(totalAmt * (gstRate / 2) * 100) / 100 : 0;
+      const sgst = gstType === 'cgst_sgst' ? Math.round(totalAmt * (gstRate / 2) * 100) / 100 : 0;
+      const igst = gstType === 'igst' ? Math.round(totalAmt * gstRate * 100) / 100 : 0;
+      const netAmount = Math.round((totalAmt + (gstType === 'none' ? 0 : gstType === 'cgst_sgst' ? cgst + sgst : igst)) * 100) / 100;
 
       const totalsTexts = (baseY) => [
         { x: 447, y: baseY, text: totalQty, align: 'center' },
         { x: 682, y: baseY, text: totalAmt.toFixed(2), align: 'center' },
-        { x: 152, y: baseY + 16, text: 'IGST 18%' },
-        { x: 682, y: baseY + 16, text: igst.toFixed(2), align: 'center' },
-        { x: 152, y: baseY + 32, text: 'Net Amount' },
-        { x: 682, y: baseY + 32, text: netAmount.toFixed(2), align: 'center' },
+        ...(gstType === 'igst' ? [
+          { x: 152, y: baseY + 16, text: `IGST ${cd.gstRate || 18}%` },
+          { x: 682, y: baseY + 16, text: igst.toFixed(2), align: 'center' },
+          { x: 152, y: baseY + 32, text: 'Net Amount' },
+          { x: 682, y: baseY + 32, text: netAmount.toFixed(2), align: 'center' },
+        ] : gstType === 'cgst_sgst' ? [
+          { x: 152, y: baseY + 16, text: `CGST ${Number(cd.gstRate || 18) / 2}%` },
+          { x: 682, y: baseY + 16, text: cgst.toFixed(2), align: 'center' },
+          { x: 152, y: baseY + 32, text: `SGST ${Number(cd.gstRate || 18) / 2}%` },
+          { x: 682, y: baseY + 32, text: sgst.toFixed(2), align: 'center' },
+          { x: 152, y: baseY + 48, text: 'Net Amount' },
+          { x: 682, y: baseY + 48, text: netAmount.toFixed(2), align: 'center' },
+        ] : [
+          { x: 152, y: baseY + 16, text: 'Net Amount' },
+          { x: 682, y: baseY + 16, text: netAmount.toFixed(2), align: 'center' },
+        ]),
       ];
 
       const page1Texts = [
@@ -350,18 +368,21 @@ const SiteDetails = () => {
 
       // Save exit challan record to backend
       const allSupervisorMachines = siteMachines.filter(m => m.assignedUserId?._id === challanSupervisor?._id);
-      await api.post('/movements/exit-challan', {
-        siteId: id,
-        supervisorId: challanSupervisor?._id,
-        challanNo,
-        machines: allSupervisorMachines.map(m => ({
-          machineUnitId: m._id,
-          machineTypeName: m.machineTypeId?.name || '',
-          serialNumber: m.serialNumber || '',
-          status: machineVerification[m._id]?.status || 'returned',
-          remark: machineVerification[m._id]?.remark || ''
-        }))
-      });
+      if (allSupervisorMachines.length > 0) {
+        await api.post('/movements/exit-challan', {
+          siteId: id,
+          supervisorId: challanSupervisor?._id,
+          challanNo,
+          machines: allSupervisorMachines.map(m => ({
+            machineUnitId: m._id,
+            machineTypeName: m.machineTypeId?.name || '',
+            serialNumber: m.serialNumber || '',
+            status: machineVerification[m._id]?.status || 'returned',
+            remark: machineVerification[m._id]?.remark || ''
+          }))
+        });
+        alert(`PDF saved & Exit Challan history mein add ho gaya! Challan No: ${challanNo}`);
+      }
     } catch (err) {
       console.error('PDF generation failed:', err);
       alert('PDF save karne mein error aaya.');
@@ -440,7 +461,10 @@ const SiteDetails = () => {
   const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
   const totalSettlementReturn = settlements.filter(s => s.status === 'approved').reduce((sum, s) => sum + (s.returnAmount || 0), 0);
   const balance = totalGiven - totalExpense - totalSettlementReturn;
-  const totalProgress = dailyUpdates.reduce((sum, update) => sum + (Number(update.progress) || 0), 0);
+  const totalProgress = Math.min(
+    dailyUpdates.reduce((sum, update) => sum + (Number(update.progress) || 0), 0),
+    100
+  );
 
   return (
     <DashboardLayout>
@@ -1041,6 +1065,34 @@ const SiteDetails = () => {
                   <input className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={challanDetails[key]} onChange={e => setChallanDetails(p => ({ ...p, [key]: e.target.value }))} />
                 </div>
               ))}
+
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1">GST Details</p>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">GST Type</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={challanDetails.gstType}
+                  onChange={e => setChallanDetails(p => ({ ...p, gstType: e.target.value }))}
+                >
+                  <option value="igst">IGST (Inter-state)</option>
+                  <option value="cgst_sgst">CGST + SGST (Intra-state)</option>
+                  <option value="none">No GST</option>
+                </select>
+              </div>
+              {challanDetails.gstType !== 'none' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">GST Rate (%)</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={challanDetails.gstRate}
+                    onChange={e => setChallanDetails(p => ({ ...p, gstRate: e.target.value }))}
+                  >
+                    {['0','5','12','18','28'].map(r => (
+                      <option key={r} value={r}>{r}%</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </>
           )}
 

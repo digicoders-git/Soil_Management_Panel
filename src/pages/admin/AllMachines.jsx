@@ -55,9 +55,9 @@ const Allmachines = () => {
 
             const typeUnits = filteredUnits.filter(u => u.machineTypeId && u.machineTypeId._id === type._id);
             if (typeUnits.length === 0) return null;
-            const availableUnits = typeUnits.filter(u => u.status === 'available').length;
+            const availableUnits = typeUnits.filter(u => u.status === 'available' && u.condition !== 'maintenance' && u.condition !== 'damaged').length;
             const assignedUnits = typeUnits.filter(u => u.status === 'assigned').length;
-            const repairUnits = typeUnits.filter(u => u.status === 'repair').length;
+            const repairUnits = typeUnits.filter(u => u.status === 'repair' || u.condition === 'maintenance' || u.condition === 'damaged').length;
             return {
                 _id: type._id,
                 name: type.name,

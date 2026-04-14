@@ -28,11 +28,12 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
   const groupedMachines = Object.values(
     machines.reduce((acc, m) => {
       const key = m.machineTypeId?._id || m.machineTypeId || m._id;
+      const cost = Number(m.purchaseCost) || 0;
       if (!acc[key]) {
-        acc[key] = { ...m, quantity: 1, totalCost: m.purchaseCost || 0, serialNumbers: [m.serialNumber] };
+        acc[key] = { ...m, quantity: 1, totalCost: cost, serialNumbers: [m.serialNumber] };
       } else {
         acc[key].quantity += 1;
-        acc[key].totalCost += m.purchaseCost || 0;
+        acc[key].totalCost += cost;
         acc[key].serialNumbers.push(m.serialNumber);
       }
       return acc;
@@ -45,9 +46,15 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
   const rowHeight = 18;
 
   const totalQty    = groupedMachines.reduce((s, m) => s + m.quantity, 0);
-  const totalAmt    = groupedMachines.reduce((s, m) => s + (m.totalCost || 0), 0);
-  const igst        = Math.round(totalAmt * 0.18 * 100) / 100;
-  const netAmount   = Math.round((totalAmt + igst) * 100) / 100;
+  const totalAmt    = groupedMachines.reduce((s, m) => s + (Number(m.totalCost) || 0), 0);
+
+  const gstType     = challanDetails.gstType || 'igst';
+  const gstRate     = Number(challanDetails.gstRate || 18) / 100;
+  const cgst        = gstType === 'cgst_sgst' ? Math.round(totalAmt * (gstRate / 2) * 100) / 100 : 0;
+  const sgst        = gstType === 'cgst_sgst' ? Math.round(totalAmt * (gstRate / 2) * 100) / 100 : 0;
+  const igst        = gstType === 'igst'      ? Math.round(totalAmt * gstRate * 100) / 100 : 0;
+  const totalGst    = gstType === 'cgst_sgst' ? cgst + sgst : igst;
+  const netAmount   = Math.round((totalAmt + totalGst) * 100) / 100;
 
   // totals row appears after last data row on whichever page is last
   const lastPage1RowTop = rowStartY + (page1Rows.length - 1) * rowHeight + 53;
@@ -102,13 +109,15 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
         {Array.from({ length: 12 }).map((_, i) => {
           const m = page1Rows[i];
           const top = rowStartY + i * rowHeight + 53;
+          const unitCost = m ? Number(m.purchaseCost) || 0 : '';
+          const totalCost = m ? Number(m.totalCost) || 0 : '';
           return (
             <React.Fragment key={i}>
               <T top={top} left={88}  width={55}  align="center">{m ? i + 1 : ''}</T>
               <T top={top} left={150} width={280}>{m ? (m.machineTypeId?.name || '-') : ''}</T>
               <T top={top} left={400} width={95}  align="center">{m ? m.quantity : ''}</T>
-              <T top={top} left={532} width={80}  align="center">{m ? (m.purchaseCost || '') : ''}</T>
-              <T top={top} left={605} width={155} align="center">{m ? (m.totalCost || '') : ''}</T>
+              <T top={top} left={532} width={80}  align="center">{m ? unitCost : ''}</T>
+              <T top={top} left={605} width={155} align="center">{m ? totalCost : ''}</T>
             </React.Fragment>
           );
         })}
@@ -116,14 +125,25 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
         {/* Totals — only on page 1 if no page 2 */}
         {page2Rows.length === 0 && totalsTop && (
           <>
-            <T top={totalsTop}      left={400} width={95}  align="center" style={{fontWeight:'bold'}}>{totalQty}</T>
+            <T top={totalsTop}      left={400} width={95}  align="center">{totalQty}</T>
             <T top={totalsTop}      left={605} width={155} align="center">{totalAmt.toFixed(2)}</T>
             <T top={totalsTop - 3} left={150} width={200} bold>Total Quantity</T>
             <T top={totalsTop - 3} left={530} width={200} bold>Total Amount</T>
-            <T top={totalsTop + 16} left={530} width={200} bold>IGST 18%</T>
-            <T top={totalsTop + 16} left={605} width={155} align="center">{igst.toFixed(2)}</T>
-            <T top={totalsTop + 32} left={530} width={200} bold>Net Amount</T>
-            <T top={totalsTop + 32} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
+            {gstType === 'igst' ? (
+              <>
+                <T top={totalsTop + 16} left={530} width={200} bold>IGST {Number(challanDetails.gstRate || 18)}%</T>
+                <T top={totalsTop + 16} left={605} width={155} align="center">{igst.toFixed(2)}</T>
+              </>
+            ) : (
+              <>
+                <T top={totalsTop + 16} left={530} width={200} bold>CGST {Number(challanDetails.gstRate || 18) / 2}%</T>
+                <T top={totalsTop + 16} left={605} width={155} align="center">{cgst.toFixed(2)}</T>
+                <T top={totalsTop + 32} left={530} width={200} bold>SGST {Number(challanDetails.gstRate || 18) / 2}%</T>
+                <T top={totalsTop + 32} left={605} width={155} align="center">{sgst.toFixed(2)}</T>
+              </>
+            )}
+            <T top={totalsTop + (gstType === 'cgst_sgst' ? 48 : 32)} left={530} width={200} bold>Net Amount</T>
+            <T top={totalsTop + (gstType === 'cgst_sgst' ? 48 : 32)} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
           </>
         )}
       </div>
@@ -135,13 +155,15 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
           {Array.from({ length: 13 }).map((_, i) => {
             const m = page2Rows[i];
             const top = 120 + i * rowHeight;
+            const unitCost = m ? Number(m.purchaseCost) || 0 : '';
+            const totalCost = m ? Number(m.totalCost) || 0 : '';
             return (
               <React.Fragment key={i}>
                 <T top={top} left={88}  width={55}  align="center">{m ? 12 + i + 1 : ''}</T>
                 <T top={top} left={150} width={280}>{m ? (m.machineTypeId?.name || '-') : ''}</T>
                 <T top={top} left={438} width={95}  align="center">{m ? m.quantity : ''}</T>
-                <T top={top} left={58}  width={80}  align="center">{m ? (m.purchaseCost || '') : ''}</T>
-                <T top={top} left={605} width={155} align="center">{m ? (m.totalCost || '') : ''}</T>
+                <T top={top} left={58}  width={80}  align="center">{m ? unitCost : ''}</T>
+                <T top={top} left={605} width={155} align="center">{m ? totalCost : ''}</T>
               </React.Fragment>
             );
           })}
@@ -153,10 +175,23 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
               <>
                 <T top={tTop}      left={438} width={95}  align="center">{totalQty}</T>
                 <T top={tTop}      left={605} width={155} align="center">{totalAmt.toFixed(2)}</T>
-                <T top={tTop + 16} left={150} width={200}>IGST 18%</T>
-                <T top={tTop + 16} left={605} width={155} align="center">{igst.toFixed(2)}</T>
-                <T top={tTop + 32} left={150} width={200}>Net Amount</T>
-                <T top={tTop + 32} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
+                {gstType === 'igst' ? (
+                  <>
+                    <T top={tTop + 16} left={150} width={200}>IGST {Number(challanDetails.gstRate || 18)}%</T>
+                    <T top={tTop + 16} left={605} width={155} align="center">{igst.toFixed(2)}</T>
+                    <T top={tTop + 32} left={150} width={200}>Net Amount</T>
+                    <T top={tTop + 32} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
+                  </>
+                ) : (
+                  <>
+                    <T top={tTop + 16} left={150} width={200}>CGST {Number(challanDetails.gstRate || 18) / 2}%</T>
+                    <T top={tTop + 16} left={605} width={155} align="center">{cgst.toFixed(2)}</T>
+                    <T top={tTop + 32} left={150} width={200}>SGST {Number(challanDetails.gstRate || 18) / 2}%</T>
+                    <T top={tTop + 32} left={605} width={155} align="center">{sgst.toFixed(2)}</T>
+                    <T top={tTop + 48} left={150} width={200}>Net Amount</T>
+                    <T top={tTop + 48} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
+                  </>
+                )}
               </>
             );
           })()}

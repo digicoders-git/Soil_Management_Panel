@@ -1,14 +1,9 @@
 import { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import { useAuth } from '../context/AuthContext';
-import Loader from '../components/Loader';
 
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { loading } = useAuth();
-
-  if (loading) return <Loader />;
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);

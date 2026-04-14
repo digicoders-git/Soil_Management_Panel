@@ -53,15 +53,17 @@ const SiteWork = () => {
     notes: '',
   });
 
+  console.log(id)
   useEffect(() => {
-    if (id && user?._id) {
+    if (id) {
+      // console.log(id)
       fetchSiteData();
     }
-  }, [id, user?._id]);
+  }, [id, user]);
 
   const fetchSiteData = async () => {
     try {
-      const [siteRes, expensesRes, installmentsRes, updatesRes, reportsRes, settlementRes, operatorRes, machinesRes] = await Promise.all([
+      const [siteRes, expensesRes, installmentsRes, updatesRes, reportsRes, settlementRes, operatorRes] = await Promise.all([
         api.get(`/sites/${id}`),
         api.get(`/expenses?siteId=${id}`),
         api.get(`/installments?siteId=${id}`),
@@ -69,7 +71,6 @@ const SiteWork = () => {
         api.get(`/reports?siteId=${id}`),
         api.get(`/site-settlements?siteId=${id}`),
         api.get(`/operator-assignments?siteId=${id}`),
-        api.get(`/machine-units?assignedUserId=${user._id}`),
       ]);
 
       setSite(siteRes.data.data);
@@ -79,7 +80,6 @@ const SiteWork = () => {
       setReports(reportsRes.data.data || []);
       setSettlement(settlementRes.data.data?.[0] || null);
       setOperatorAssignments(operatorRes.data.data || []);
-      setSiteMachines(machinesRes.data.data || []);
       const opRes = await api.get('/operators');
       setOperators(opRes.data.data || []);
     } catch (error) {
@@ -274,17 +274,20 @@ const SiteWork = () => {
   const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
   const totalSettlementReturn = settlement && settlement.status === 'approved' ? (settlement.returnAmount || 0) : 0;
   const balance = totalGiven - totalExpense - totalSettlementReturn;
-  const totalProgress = dailyUpdates.reduce((sum, update) => sum + (Number(update.progress) || 0), 0);
+  const totalProgress = Math.min(
+    dailyUpdates.reduce((sum, update) => sum + (Number(update.progress) || 0), 0),
+    100
+  );
 
   return (
     <DashboardLayout>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{site.name}</h1>
         {!['completed', 'cancelled', 'closed'].includes(site.status) && (
           totalProgress >= 90 ? (
             <button
               onClick={handleMarkCompleted}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold shadow"
+              className="px-4 py-2 font-bold text-white bg-green-600 rounded-lg shadow hover:bg-green-700"
             >
               Mark as Completed
             </button>
@@ -299,8 +302,8 @@ const SiteWork = () => {
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'overview' && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="p-6 bg-white rounded-lg shadow">
+          <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
             <div>
               <p className="text-sm text-gray-600">Address</p>
               <p className="font-medium">{site.address}</p>
@@ -324,22 +327,22 @@ const SiteWork = () => {
             </div>
           </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Budget Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="pt-6 border-t">
+            <h3 className="mb-4 text-lg font-semibold">Budget Summary</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+              <div className="p-4 rounded-lg bg-blue-50">
                 <p className="text-sm text-gray-600">Estimated Cost</p>
                 <p className="text-xl font-bold text-blue-600">₹{site.estimatedCost?.toLocaleString()}</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="p-4 rounded-lg bg-green-50">
                 <p className="text-sm text-gray-600">Total Given</p>
                 <p className="text-xl font-bold text-green-600">₹{totalGiven.toLocaleString()}</p>
               </div>
-              <div className="bg-red-50 p-4 rounded-lg">
+              <div className="p-4 rounded-lg bg-red-50">
                 <p className="text-sm text-gray-600">Work Expense</p>
                 <p className="text-xl font-bold text-red-600">₹{totalExpense.toLocaleString()}</p>
               </div>
-              <div className="bg-indigo-50 p-4 rounded-lg">
+              <div className="p-4 rounded-lg bg-indigo-50">
                 <p className="text-sm text-gray-600">Returned to Admin</p>
                 <p className="text-xl font-bold text-indigo-600">₹{totalSettlementReturn.toLocaleString()}</p>
               </div>
@@ -355,18 +358,18 @@ const SiteWork = () => {
       )}
 
       {activeTab === 'machines' && (
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
           {siteMachines.length > 0 ? (
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial No.</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Site</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Machine</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Serial No.</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Condition</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Current Site</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Operator</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -376,7 +379,7 @@ const SiteWork = () => {
                     <td className="px-6 py-4 text-sm">{m.serialNumber}</td>
                     <td className="px-6 py-4 text-sm capitalize">{m.condition}</td>
                     <td className="px-6 py-4 text-sm">{m.currentSiteId?.name || '—'}</td>
-                    <td className="px-6 py-4 text-sm">{m.operatorId?.name || <span className="text-gray-400 text-xs">Not Assigned</span>}</td>
+                    <td className="px-6 py-4 text-sm">{m.operatorId?.name || <span className="text-xs text-gray-400">Not Assigned</span>}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         m.status === 'assigned' ? 'bg-blue-100 text-blue-700' :
@@ -387,7 +390,7 @@ const SiteWork = () => {
                     <td className="px-6 py-4 text-sm">
                       <button
                         onClick={() => setAssignOperatorModal({ isOpen: true, machineId: m._id, operatorId: m.operatorId?._id || '' })}
-                        className="text-indigo-600 hover:text-indigo-900 font-semibold text-xs"
+                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-900"
                       >
                         {m.operatorId ? 'Change Operator' : 'Assign Operator'}
                       </button>
@@ -404,47 +407,47 @@ const SiteWork = () => {
 
       {activeTab === 'operators' && (
         <div>
-          <div className="mb-4 flex justify-end">
+          <div className="flex justify-end mb-4">
             <button
               onClick={() => { setIsOperatorModalOpen(true); setEditingAssignment(null); setOperatorForm({ operatorId: '', startDate: '', endDate: '' }); }}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
             >
               + Add Operator Work Period
             </button>
           </div>
-          <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <div className="overflow-x-auto bg-white rounded-lg shadow">
             {operatorAssignments.length > 0 ? (
               <table className="min-w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Operator</th>
+                    <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Machine</th>
+                    <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Start Date</th>
+                    <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">End Date</th>
+                    <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {operatorAssignments.map(a => (
                     <tr key={a._id}>
                       <td className="px-6 py-4 text-sm font-medium">{a.operatorId?.name}</td>
-                      <td className="px-6 py-4 text-sm">{a.machineUnitId ? `SN: ${a.machineUnitId.serialNumber}` : <span className="text-gray-400 text-xs">Site Level</span>}</td>
+                      <td className="px-6 py-4 text-sm">{a.machineUnitId ? `SN: ${a.machineUnitId.serialNumber}` : <span className="text-xs text-gray-400">Site Level</span>}</td>
                       <td className="px-6 py-4 text-sm">{new Date(a.startDate).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-sm">{a.endDate ? new Date(a.endDate).toLocaleDateString() : '—'}</td>
                       <td className="px-6 py-4 text-sm">
                         {a.endDate && new Date(a.endDate) < new Date()
-                          ? <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">Completed</span>
-                          : <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Active</span>}
+                          ? <span className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded-full">Completed</span>
+                          : <span className="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full">Active</span>}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <button
                           onClick={() => { setEditingAssignment(a); setOperatorForm({ operatorId: a.operatorId?._id, startDate: a.startDate?.slice(0, 10), endDate: a.endDate?.slice(0, 10) || '' }); setIsOperatorModalOpen(true); }}
-                          className="text-blue-600 hover:text-blue-900 font-semibold mr-3"
+                          className="mr-3 font-semibold text-blue-600 hover:text-blue-900"
                         >Edit</button>
                         <button
                           onClick={() => handleDeleteOperatorAssignment(a._id)}
-                          className="text-red-600 hover:text-red-900 font-semibold"
+                          className="font-semibold text-red-600 hover:text-red-900"
                         >Remove</button>
                       </td>
                     </tr>
@@ -461,10 +464,10 @@ const SiteWork = () => {
       {activeTab === 'updates' && (
         <div>
           {!['completed', 'cancelled', 'closed'].includes(site.status) && (
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">Submit Daily Work Update</h2>
+            <div className="p-6 mb-6 bg-white rounded-lg shadow">
+              <h2 className="mb-4 text-lg font-semibold">Submit Daily Work Update</h2>
               <form onSubmit={handleUpdateSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <FormInput
                     label="Work Description"
                     type="textarea"
@@ -491,7 +494,7 @@ const SiteWork = () => {
                 </div>
                 <button
                   type="submit"
-                  className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="px-6 py-2 mt-4 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
                 >
                   Submit Update
                 </button>
@@ -510,10 +513,10 @@ const SiteWork = () => {
 
       {activeTab === 'expense' && (
         <div>
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Add Daily Expense</h2>
+          <div className="p-6 mb-6 bg-white rounded-lg shadow">
+            <h2 className="mb-4 text-lg font-semibold">Add Daily Expense</h2>
             <form onSubmit={handleExpenseSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <FormInput
                   label="Amount"
                   type="number"
@@ -547,7 +550,7 @@ const SiteWork = () => {
               </div>
               <button
                 type="submit"
-                className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-6 py-2 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
               >
                 Add Expense
               </button>
@@ -565,8 +568,8 @@ const SiteWork = () => {
       )}
 
       {activeTab === 'report' && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Report Machine Issue</h2>
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h2 className="mb-4 text-lg font-semibold">Report Machine Issue</h2>
           <form onSubmit={handleReportSubmit}>
             <FormInput
               label="Select Machine"
@@ -597,36 +600,36 @@ const SiteWork = () => {
             />
             <button
               type="submit"
-              className="mt-4 w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700"
+              className="w-full py-2 mt-4 text-white bg-red-600 rounded-lg hover:bg-red-700"
             >
               Report Issue
             </button>
           </form>
 
-          <div className="mt-8 border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Reported Issues</h3>
+          <div className="pt-6 mt-8 border-t">
+            <h3 className="mb-4 text-lg font-semibold">Reported Issues</h3>
             <div className="space-y-4">
               {reports.map((report) => (
-                <div key={report._id} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
+                <div key={report._id} className="p-4 border rounded-lg bg-gray-50">
+                  <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="font-medium text-red-600">Machine: {report.machineUnitId?.machineTypeId?.name} (SN: {report.machineUnitId?.serialNumber})</p>
-                      <p className="text-sm text-gray-700 mt-1">{report.issue}</p>
+                      <p className="mt-1 text-sm text-gray-700">{report.issue}</p>
                     </div>
                     <StatusBadge status={report.status} />
                   </div>
 
                   {report.status !== 'fixed' && report.status !== 'dead' && (
-                    <div className="flex space-x-3 mt-4 pt-3 border-t border-gray-200">
+                    <div className="flex pt-3 mt-4 space-x-3 border-t border-gray-200">
                       {report.status === 'approved' ? (
                         <button
                           onClick={() => setRepairModal({ isOpen: true, reportId: report._id, cost: report.estimatedCost || '' })}
-                          className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 font-semibold"
+                          className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded hover:bg-blue-700"
                         >
                           Mark Repaired (Enter Final Cost)
                         </button>
                       ) : (
-                        <p className="text-gray-500 text-sm mt-2 italic flex-1">
+                        <p className="flex-1 mt-2 text-sm italic text-gray-500">
                           {report.status === 'rejected' ? 'Repair rejected.' : 'Wait for Admin to approve repair...'}
                         </p>
                       )}
@@ -634,7 +637,7 @@ const SiteWork = () => {
                       {report.status !== 'rejected' && (
                         <button
                           onClick={() => handleMarkDead(report._id)}
-                          className="px-4 py-2 bg-gray-800 text-white text-sm rounded hover:bg-black"
+                          className="px-4 py-2 text-sm text-white bg-gray-800 rounded hover:bg-black"
                         >
                           Mark Dead / Scrap
                         </button>
@@ -643,20 +646,20 @@ const SiteWork = () => {
                   )}
 
                   {report.estimatedCost > 0 && report.status !== 'fixed' && (
-                    <p className="text-sm font-semibold text-orange-600 mt-2">
+                    <p className="mt-2 text-sm font-semibold text-orange-600">
                       Estimated Cost: ₹{report.estimatedCost}
                     </p>
                   )}
 
                   {report.status === 'fixed' && report.repairCost > 0 && (
-                    <p className="text-sm font-semibold text-green-700 mt-2">
+                    <p className="mt-2 text-sm font-semibold text-green-700">
                       Repaired (Cost: ₹{report.repairCost})
                     </p>
                   )}
                 </div>
               ))}
               {reports.length === 0 && (
-                <p className="text-gray-500 text-sm">No machine issues reported on this site.</p>
+                <p className="text-sm text-gray-500">No machine issues reported on this site.</p>
               )}
             </div>
           </div>
@@ -665,23 +668,23 @@ const SiteWork = () => {
 
       {activeTab === 'settlement' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Financial Summary</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="p-6 bg-white rounded-lg shadow">
+            <h2 className="mb-4 text-lg font-semibold">Financial Summary</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="p-4 rounded-lg bg-blue-50">
                 <p className="text-sm text-gray-600">Estimated Cost</p>
                 <p className="text-xl font-bold text-blue-600">₹{site.estimatedCost?.toLocaleString()}</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="p-4 rounded-lg bg-green-50">
                 <p className="text-sm text-gray-600">Total Installment</p>
                 <p className="text-xl font-bold text-green-600">₹{totalGiven.toLocaleString()}</p>
               </div>
-              <div className="bg-red-50 p-4 rounded-lg">
+              <div className="p-4 rounded-lg bg-red-50">
                 <p className="text-sm text-gray-600">Total Expense</p>
                 <p className="text-xl font-bold text-red-600">₹{totalExpense.toLocaleString()}</p>
               </div>
               <div className={`${balance >= 0 ? 'bg-green-100' : 'bg-red-100'} p-4 rounded-lg border-2 ${balance >= 0 ? 'border-green-500' : 'border-red-500'}`}>
-                <p className="text-sm text-gray-600 font-semibold">Remaining Balance</p>
+                <p className="text-sm font-semibold text-gray-600">Remaining Balance</p>
                 <p className={`text-2xl font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                   ₹{balance.toLocaleString()}
                 </p>
@@ -690,20 +693,20 @@ const SiteWork = () => {
           </div>
 
           {(totalProgress < 90 && site.status !== 'completed') ? (
-            <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl p-8 text-center text-slate-500">
-              <svg className="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-              <h3 className="text-lg font-medium text-slate-800 mb-1">Settlement Locked</h3>
+            <div className="p-8 text-center border-2 border-dashed bg-slate-50 border-slate-300 rounded-xl text-slate-500">
+              <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              <h3 className="mb-1 text-lg font-medium text-slate-800">Settlement Locked</h3>
               <p>Please reach at least 90% work progress to initiate Final Settlement.</p>
             </div>
           ) : (
             <>
 
               {balance > 0 && (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-lg font-semibold mb-4">Return Remaining Balance</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-6 bg-white rounded-lg shadow">
+                  <h2 className="mb-4 text-lg font-semibold">Return Remaining Balance</h2>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Amount to Return</label>
+                      <label className="block mb-1 text-sm font-medium text-gray-700">Amount to Return</label>
                       <input
                         type="number"
                         min="0"
@@ -716,7 +719,7 @@ const SiteWork = () => {
                         placeholder={`Max: ₹${balance.toLocaleString()}`}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
-                      <p className="text-xs text-gray-400 mt-1">Max returnable: ₹{balance.toLocaleString()}</p>
+                      <p className="mt-1 text-xs text-gray-400">Max returnable: ₹{balance.toLocaleString()}</p>
                     </div>
                     <FormInput
                       label="Notes"
@@ -731,22 +734,22 @@ const SiteWork = () => {
               )}
 
               {settlement ? (
-                <div className="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
-                  <div className="flex justify-between items-center mb-4">
+                <div className="p-6 bg-white border-l-4 border-indigo-500 rounded-lg shadow">
+                  <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-gray-800">Settlement Submitted</h2>
                     <StatusBadge status={settlement.status} />
                   </div>
-                  <p className="text-gray-600 mb-2">You have submitted the final settlement. Waiting for Admin approval.</p>
-                  <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="mb-2 text-gray-600">You have submitted the final settlement. Waiting for Admin approval.</p>
+                  <div className="p-4 rounded-lg bg-gray-50">
                     <p className="text-sm"><span className="font-semibold">Returned Amount:</span> ₹{settlement.returnAmount}</p>
                     <p className="text-sm"><span className="font-semibold">Notes:</span> {settlement.notes || 'None'}</p>
                   </div>
                   {settlement.returnedmachines && settlement.returnedmachines.length > 0 && (
                     <div className="mt-4">
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">Returned machines:</h3>
+                      <h3 className="mb-2 text-sm font-semibold text-gray-800">Returned machines:</h3>
                       <ul className="space-y-2">
                         {settlement.returnedmachines.map(m => (
-                          <li key={m._id} className="text-sm bg-gray-50 p-2 rounded flex justify-between items-center border">
+                          <li key={m._id} className="flex items-center justify-between p-2 text-sm border rounded bg-gray-50">
                             <span>{m.machineTypeId?.name} (SN: {m.serialNumber})</span>
                             <span className={`px-2 py-1 rounded text-xs font-semibold
                               ${m.condition === 'good' ? 'bg-green-100 text-green-800' :
@@ -759,27 +762,27 @@ const SiteWork = () => {
                     </div>
                   )}
                   {settlement.status === 'approved' && (
-                    <div className="mt-4 p-3 bg-green-50 text-green-800 rounded-lg text-sm border border-green-200">
+                    <div className="p-3 mt-4 text-sm text-green-800 border border-green-200 rounded-lg bg-green-50">
                       <strong>Success!</strong> Admin has approved this settlement. No further action is required.
                     </div>
                   )}
                   {settlement.status === 'rejected' && (
-                    <div className="mt-4 p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-red-200">
+                    <div className="p-3 mt-4 text-sm text-red-800 border border-red-200 rounded-lg bg-red-50">
                       <strong>Rejected!</strong> Admin rejected your settlement. Please check with the admin or submit a new one.
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="p-6 bg-white rounded-lg shadow">
                   <button
                     onClick={() => setIsConfirmModalOpen(true)}
                     disabled={site.status !== 'completed'}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
+                    className="w-full py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     Submit for Admin Approval
                   </button>
                   {site.status !== 'completed' && (
-                    <p className="text-sm text-gray-500 mt-2 text-center">Site must be marked as completed first</p>
+                    <p className="mt-2 text-sm text-center text-gray-500">Site must be marked as completed first</p>
                   )}
                 </div>
               )}
@@ -793,20 +796,20 @@ const SiteWork = () => {
           >
             <div className="space-y-4">
               <p className="text-gray-700">Are you sure you want to submit this settlement for admin approval?</p>
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="p-4 rounded-lg bg-gray-50">
                 <p className="text-sm text-gray-600">Return Amount: <span className="font-semibold">₹{settlementForm.returnAmount || 0}</span></p>
                 <p className="text-sm text-gray-600">Remaining Balance: <span className="font-semibold">₹{balance.toLocaleString()}</span></p>
               </div>
               <div className="flex space-x-3">
                 <button
                   onClick={handleFinalSubmit}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                  className="flex-1 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                 >
                   Confirm Submit
                 </button>
                 <button
                   onClick={() => setIsConfirmModalOpen(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
+                  className="flex-1 py-2 text-gray-700 bg-gray-300 rounded-lg hover:bg-gray-400"
                 >
                   Cancel
                 </button>
@@ -821,7 +824,7 @@ const SiteWork = () => {
             title="Repair Machine & Log Expense"
           >
             <div className="space-y-4">
-              <p className="text-gray-700 text-sm">
+              <p className="text-sm text-gray-700">
                 Enter the cost of repairing the machine. This will automatically log a Daily Expense.
               </p>
               <FormInput
@@ -832,16 +835,16 @@ const SiteWork = () => {
                 placeholder="e.g. 5000"
                 required
               />
-              <div className="flex space-x-3 mt-4">
+              <div className="flex mt-4 space-x-3">
                 <button
                   onClick={submitRepair}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+                  className="flex-1 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
                 >
                   Submit Repair Cost
                 </button>
                 <button
                   onClick={() => setRepairModal({ isOpen: false, reportId: '', cost: '' })}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
+                  className="flex-1 py-2 text-gray-700 bg-gray-300 rounded-lg hover:bg-gray-400"
                 >
                   Cancel
                 </button>
@@ -877,7 +880,7 @@ const SiteWork = () => {
             value={operatorForm.endDate}
             onChange={(e) => setOperatorForm({ ...operatorForm, endDate: e.target.value })}
           />
-          <button type="submit" className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 mt-4">
+          <button type="submit" className="w-full py-2 mt-4 text-white bg-green-600 rounded-lg hover:bg-green-700">
             {editingAssignment ? 'Update' : 'Save'}
           </button>
         </form>
@@ -886,7 +889,7 @@ const SiteWork = () => {
       <Modal isOpen={assignOperatorModal.isOpen} onClose={() => setAssignOperatorModal({ isOpen: false, machineId: '', operatorId: '' })} title="Assign Operator to Machine">
         <form onSubmit={handleAssignOperatorToMachine}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Operator</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">Select Operator</label>
             <select
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={assignOperatorModal.operatorId}
@@ -902,11 +905,11 @@ const SiteWork = () => {
           <button
             type="button"
             onClick={() => setIsCreateOperatorOpen(true)}
-            className="w-full mb-3 py-2 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50"
+            className="w-full py-2 mb-3 text-sm font-semibold text-indigo-600 border-2 border-indigo-300 border-dashed rounded-lg hover:bg-indigo-50"
           >
             + Create New Operator
           </button>
-          <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-semibold">
+          <button type="submit" className="w-full py-2 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
             Assign
           </button>
         </form>
@@ -921,7 +924,7 @@ const SiteWork = () => {
             onChange={e => setNewOperatorName(e.target.value)}
             required
           />
-          <button type="submit" className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 font-semibold">
+          <button type="submit" className="w-full py-2 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700">
             Create Operator
           </button>
         </form>

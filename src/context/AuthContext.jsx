@@ -37,21 +37,18 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
-    // Try sessionStorage first, then cookie
     let token = sessionStorage.getItem('token');
     if (!token) {
       token = getCookie('token');
-      if (token) {
-        sessionStorage.setItem('token', token);
-      }
+      if (token) sessionStorage.setItem('token', token);
     }
-
     if (token) {
       try {
         const { data } = await api.get('/auth/me');
@@ -59,19 +56,20 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         sessionStorage.removeItem('token');
         eraseCookie('token');
+        setUser(null);
       }
     }
     setLoading(false);
+    setInitialized(true);
   };
 
   const login = async (mobile, password) => {
     try {
       const { data } = await api.post('/auth/login', { mobile, password });
-
-      // Save to sessionStorage and Cookie
       sessionStorage.setItem('token', data.token);
       setCookie('token', data.token);
-
+      setLoading(false);
+      setInitialized(true);
       setUser(data.user);
       return data;
     } catch (error) {
@@ -93,6 +91,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    initialized,
     login,
     logout,
     isAuthenticated: !!user,
