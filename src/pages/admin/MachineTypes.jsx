@@ -8,6 +8,7 @@ import api from '../../services/api';
 const MachineTypes = () => {
     const [types, setTypes] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [selectedTypeIds, setSelectedTypeIds] = useState([]);
     const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [typeForm, setTypeForm] = useState({ name: '', category: '', description: '', brand: '', model: '' });
@@ -89,6 +90,21 @@ const MachineTypes = () => {
         }
     };
 
+    const handleBulkDeleteTypes = async () => {
+        if (!selectedTypeIds.length) return;
+        if (!window.confirm(`Delete ${selectedTypeIds.length} selected types?`)) return;
+        try {
+            await Promise.all(selectedTypeIds.map(id => api.delete(`/machine-types/${id}`)));
+            setSelectedTypeIds([]);
+            fetchData();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to delete some types');
+        }
+    };
+
+    const toggleTypeSelect = (id) => setSelectedTypeIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    const toggleSelectAllTypes = () => setSelectedTypeIds(prev => prev.length === types.length ? [] : types.map(t => t._id));
+
     const handleEditCategory = (cat) => {
         setEditingCategoryId(cat._id);
         setCategoryForm({ name: cat.name });
@@ -157,7 +173,63 @@ const MachineTypes = () => {
 
             {/* Types Table */}
             <div className="bg-white rounded-lg shadow">
-                <DataTable columns={typeColumns} data={types} onEdit={handleEditType} onDelete={handleDeleteType} />
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                    <div className="flex items-center gap-3">
+                        <input type="checkbox" className="w-4 h-4 cursor-pointer"
+                            checked={types.length > 0 && selectedTypeIds.length === types.length}
+                            onChange={toggleSelectAllTypes}
+                        />
+                        <span className="text-sm text-gray-500">{selectedTypeIds.length > 0 ? `${selectedTypeIds.length} selected` : `${types.length} types`}</span>
+                    </div>
+                    {selectedTypeIds.length > 0 && (
+                        <button onClick={handleBulkDeleteTypes} className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">
+                            Delete Selected ({selectedTypeIds.length})
+                        </button>
+                    )}
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-100">
+                        <thead>
+                            <tr>
+                                <th className="px-4 py-3"></th>
+                                {typeColumns.map(col => (
+                                    <th key={col.key} className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{col.label}</th>
+                                ))}
+                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {types.map(type => (
+                                <tr key={type._id} className={selectedTypeIds.includes(type._id) ? 'bg-red-50' : 'hover:bg-gray-50/50'}>
+                                    <td className="px-4 py-4">
+                                        <input type="checkbox" className="w-4 h-4 cursor-pointer"
+                                            checked={selectedTypeIds.includes(type._id)}
+                                            onChange={() => toggleTypeSelect(type._id)}
+                                        />
+                                    </td>
+                                    {typeColumns.map(col => (
+                                        <td key={col.key} className="px-6 py-4 text-sm text-gray-600">
+                                            {col.render ? col.render(type[col.key]) : type[col.key]}
+                                        </td>
+                                    ))}
+                                    <td className="px-6 py-4">
+                                        <div className="flex gap-3">
+                                            <button onClick={() => handleEditType(type)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                            </button>
+                                            <button onClick={() => handleDeleteType(type)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {types.length === 0 && (
+                                <tr><td colSpan={typeColumns.length + 2} className="px-6 py-12 text-center text-gray-400">No types found</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Add/Edit Type Modal */}

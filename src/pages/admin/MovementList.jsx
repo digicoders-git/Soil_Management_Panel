@@ -42,6 +42,7 @@ const renderPageToCanvas = (imgSrc, texts) => new Promise((resolve, reject) => {
 const MovementList = () => {
   const [movements, setMovements] = useState([]);
   const [exitChallans, setExitChallans] = useState([]);
+  const [selectedMovementIds, setSelectedMovementIds] = useState([]);
   const [activeTab, setActiveTab] = useState('movements');
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [requestForm, setRequestForm] = useState({ machineUnitId: '', toLocationType: 'supervisor', toLocationId: '', notes: '' });
@@ -218,6 +219,21 @@ const MovementList = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!selectedMovementIds.length) return;
+    if (!window.confirm(`Delete ${selectedMovementIds.length} selected movements?`)) return;
+    try {
+      await Promise.all(selectedMovementIds.map(id => api.delete(`/movements/${id}`)));
+      setSelectedMovementIds([]);
+      fetchMovements();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to delete some movements');
+    }
+  };
+
+  const toggleMovementSelect = (id) => setSelectedMovementIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleSelectAllMovements = () => setSelectedMovementIds(prev => prev.length === movements.length ? [] : movements.map(m => m._id));
+
   const handleChallanFormSubmit = (e) => {
     e.preventDefault();
     if (!selectedSupervisorId) return alert('Please select a supervisor');
@@ -389,10 +405,25 @@ const MovementList = () => {
 
       {activeTab === 'movements' && (
         <div className="bg-white rounded-lg shadow">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <div className="flex items-center gap-3">
+              <input type="checkbox" className="w-4 h-4 cursor-pointer"
+                checked={movements.length > 0 && selectedMovementIds.length === movements.length}
+                onChange={toggleSelectAllMovements}
+              />
+              <span className="text-sm text-gray-500">{selectedMovementIds.length > 0 ? `${selectedMovementIds.length} selected` : `${movements.length} records`}</span>
+            </div>
+            {selectedMovementIds.length > 0 && (
+              <button onClick={handleBulkDelete} className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">
+                Delete Selected ({selectedMovementIds.length})
+              </button>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-3"></th>
                   {columns.map((column) => (
                     <th key={column.key} className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">{column.label}</th>
                   ))}
@@ -401,7 +432,13 @@ const MovementList = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {movements.map((item) => (
-                  <tr key={item._id}>
+                  <tr key={item._id} className={selectedMovementIds.includes(item._id) ? 'bg-red-50' : ''}>
+                    <td className="px-4 py-4">
+                      <input type="checkbox" className="w-4 h-4 cursor-pointer"
+                        checked={selectedMovementIds.includes(item._id)}
+                        onChange={() => toggleMovementSelect(item._id)}
+                      />
+                    </td>
                     {columns.map((column) => (
                       <td key={column.key} className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
                         {column.render ? column.render(item[column.key], item) : item[column.key]}
