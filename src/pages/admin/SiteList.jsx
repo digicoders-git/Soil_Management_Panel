@@ -5,6 +5,7 @@ import DataTable from '../../components/DataTable';
 import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
 import FormInput from '../../components/FormInput';
+import { ExportButtons, exportToExcel, exportToPdf } from '../../utils/exportUtils';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -125,12 +126,13 @@ const SiteList = () => {
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Sites</h1>
-        <button
-          onClick={() => navigate('/admin/create-site')}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-        >
-          Create Site
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <ExportButtons
+            onExcel={() => exportToExcel(enrichedSites, [{key:'name',label:'Site Name'},{key:'status',label:'Status'},{key:'estimatedCost',label:'Estimated Cost'},{key:'givenAmount',label:'Given Amount'},{key:'expenseUsed',label:'Expense Used'},{key:'remainingBalance',label:'Remaining Balance'}], 'sites')}
+            onPdf={() => exportToPdf(enrichedSites, [{key:'name',label:'Site Name'},{key:'status',label:'Status'},{key:'estimatedCost',label:'Est. Cost'},{key:'givenAmount',label:'Given'},{key:'remainingBalance',label:'Balance'}], 'Sites Report', 'sites')}
+          />
+          <button onClick={() => navigate('/admin/create-site')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Create Site</button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow">

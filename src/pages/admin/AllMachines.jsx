@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import DataTable from '../../components/DataTable';
+import { ExportButtons, exportToExcel, exportToPdf } from '../../utils/exportUtils';
 import api from '../../services/api';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -93,6 +94,10 @@ const Allmachines = () => {
         <DashboardLayout>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Stocks Overview</h1>
+                <ExportButtons
+                    onExcel={() => exportToExcel(summary, [{key:'name',label:'Stock Type'},{key:'category',label:'Category'},{key:'totalQuantity',label:'Total'},{key:'availableQuantity',label:'Available'},{key:'assignedQuantity',label:'Assigned'},{key:'repairQuantity',label:'In Repair'}], 'all-stocks')}
+                    onPdf={() => exportToPdf(summary, [{key:'name',label:'Stock Type'},{key:'category',label:'Category'},{key:'totalQuantity',label:'Total'},{key:'availableQuantity',label:'Available'},{key:'assignedQuantity',label:'Assigned'},{key:'repairQuantity',label:'In Repair'}], 'All Stocks Overview', 'all-stocks')}
+                />
             </div>
 
             {/* Filters */}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import FormInput from '../../components/FormInput';
 import DataTable from '../../components/DataTable';
+import { ExportButtons, exportToExcel, exportToPdf } from '../../utils/exportUtils';
 import api from '../../services/api';
 
 const GiveInstallment = () => {
@@ -87,7 +88,13 @@ const GiveInstallment = () => {
 
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Give Installment</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Give Installment</h1>
+        <ExportButtons
+          onExcel={() => exportToExcel(filteredInstallments, [{key:'siteId',label:'Site'},{key:'receivedBy',label:'Supervisor'},{key:'amount',label:'Amount'},{key:'note',label:'Note'},{key:'date',label:'Date'}], 'installments')}
+          onPdf={() => exportToPdf(filteredInstallments, [{key:'siteId',label:'Site'},{key:'receivedBy',label:'Supervisor'},{key:'amount',label:'Amount'},{key:'date',label:'Date'}], 'Installments Report', 'installments')}
+        />
+      </div>
 
       {/* Grand Total Banner */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 mb-6 text-white flex justify-between items-center shadow-lg">

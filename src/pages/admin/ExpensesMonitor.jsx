@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import DataTable from '../../components/DataTable';
 import FormInput from '../../components/FormInput';
+import { ExportButtons, exportToExcel, exportToPdf } from '../../utils/exportUtils';
 import api from '../../services/api';
 
 const ExpensesMonitor = () => {
@@ -56,7 +57,13 @@ const ExpensesMonitor = () => {
 
   return (
     <DashboardLayout>
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Expenses Monitor</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Expenses Monitor</h1>
+        <ExportButtons
+          onExcel={() => exportToExcel(filteredExpenses, [{key:'siteId',label:'Site'},{key:'userId',label:'Supervisor'},{key:'amount',label:'Amount'},{key:'category',label:'Category'},{key:'description',label:'Description'},{key:'date',label:'Date'}], 'expenses')}
+          onPdf={() => exportToPdf(filteredExpenses, [{key:'siteId',label:'Site'},{key:'userId',label:'Supervisor'},{key:'amount',label:'Amount'},{key:'category',label:'Category'},{key:'date',label:'Date'}], 'Expenses Report', 'expenses')}
+        />
+      </div>
 
       <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Filters</h2>
