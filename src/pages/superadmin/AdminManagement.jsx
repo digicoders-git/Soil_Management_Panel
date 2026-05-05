@@ -8,16 +8,17 @@ import { ExportButtons, exportToExcel, exportToPdf } from '../../utils/exportUti
 import api from '../../services/api';
 
 export const MODULES = [
-  { key: 'manage_site_incharge', label: 'Manage Site Incharge' },
-  { key: 'manage_stock_operator', label: 'Manage Stock Operator' },
-  { key: 'create_site', label: 'Create Site' },
-  { key: 'view_all_site', label: 'View all Site' },
-  { key: 'stock', label: 'Stock (Type/Units)' },
-  { key: 'all_stock', label: 'All Stock' },
-  { key: 'stock_movement', label: 'Stock Movement' },
-  { key: 'installment', label: 'Installment' },
-  { key: 'expenses', label: 'Expenses' },
-  { key: 'report', label: 'Report' },
+  { key: 'manage_site_incharge', label: '1) Manage Site Incharge' },
+  { key: 'manage_stock_operator', label: '2) Manage Stock Operator' },
+  { key: 'create_site', label: '3) Create Site' },
+  { key: 'view_all_site', label: '4) View all Site' },
+  { key: 'stock', label: '5) Add Stock Type' }, // Mapping 'stock' to 'Add Stock Type'
+  { key: 'stock_units', label: '6) Add Stock Units' }, // New key
+  { key: 'all_stock', label: '7) All Stock' },
+  { key: 'stock_movement', label: '8) Stock Movement' },
+  { key: 'installment', label: '9) Installment' },
+  { key: 'expenses', label: '10) Expenses' },
+  { key: 'report', label: '11) Report' },
 ];
 
 export const ACTIONS = [

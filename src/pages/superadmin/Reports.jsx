@@ -56,16 +56,16 @@ const Reports = () => {
                 ...expenses.map(e => ({
                   ...e,
                   type: 'Expense',
-                  supervisor: e.userId?.name || '-',
-                  siteName: e.siteId?.name || '-',
+                  supervisor_name: e.userId?.name || e.userId || '-',
+                  site_name: e.siteId?.name || e.siteId || '-',
                   expense_amt: e.amount,
                   advance_amt: 0
                 })),
                 ...installments.map(i => ({
                   ...i,
                   type: 'Advance',
-                  supervisor: i.receivedBy?.name || '-',
-                  siteName: i.siteId?.name || '-',
+                  supervisor_name: i.receivedBy?.name || i.receivedBy || '-',
+                  site_name: i.siteId?.name || i.siteId || '-',
                   expense_amt: 0,
                   advance_amt: i.amount,
                   description: i.note
@@ -73,10 +73,10 @@ const Reports = () => {
               ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
               exportToExcel(combined, [
-                { key: 'siteName', label: 'Site' },
+                { key: 'site_name', label: 'Site' },
                 { key: 'date', label: 'Date' },
-                { key: 'supervisor', label: 'Supervisor' },
-                { key: 'type', label: 'Type' },
+                { key: 'supervisor_name', label: 'Supervisor Name' },
+                { key: 'type', label: 'Transaction Type' },
                 { key: 'advance_amt', label: 'Advance Given' },
                 { key: 'expense_amt', label: 'Expense Amount' },
                 { key: 'category', label: 'Category' },

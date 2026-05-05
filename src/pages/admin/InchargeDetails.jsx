@@ -20,6 +20,10 @@ const InchargeDetails = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [assignedSites, setAssignedSites] = useState([]);
+  const [isUnassignModalOpen, setIsUnassignModalOpen] = useState(false);
+  const [selectedMachineForUnassign, setSelectedMachineForUnassign] = useState(null);
+  const [selectedSiteForUnassign, setSelectedSiteForUnassign] = useState('');
   const [assignForm, setAssignForm] = useState({ unitIds: [], operatorId: '', quantity: 1 });
   const [challanDetails, setChallanDetails] = useState({
     consignorName: 'Arun Soil Lab Private Limited',
@@ -53,7 +57,17 @@ const InchargeDetails = () => {
     fetchMachines();
     fetchAvailableMachines();
     fetchOperators();
+    fetchAssignedSites();
   }, [id]);
+
+  const fetchAssignedSites = async () => {
+    try {
+      const { data } = await api.get(`/sites?userId=${id}`);
+      setAssignedSites(data.data || []);
+    } catch (error) {
+      console.error('Error fetching assigned sites:', error);
+    }
+  };
 
   const fetchIncharge = async () => {
     try {
@@ -328,24 +342,35 @@ const InchargeDetails = () => {
     }
   };
 
-  const handleReturnMachine = async (machine) => {
-    if (window.confirm(`Return this machine (${machine.serialNumber}) to store?`)) {
-      try {
-        const res = await api.post('/movements', {
-          machineUnitId: machine._id,
-          fromLocationType: machine.status === 'assigned' ? 'site' : 'supervisor',
-          fromLocationId: machine.currentSiteId?._id || null,
-          toLocationType: 'store',
-          notes: 'Returned from supervisor'
-        });
-        await api.put(`/movements/${res.data.data._id}/approve`);
-        fetchMachines();
-        fetchAvailableMachines();
-        alert('Machine returned successfully');
-      } catch (error) {
-        console.error('Error returning machine:', error);
-        alert(error.response?.data?.message || 'Error occurred');
-      }
+  const handleReturnMachine = (machine) => {
+    setSelectedMachineForUnassign(machine);
+    setSelectedSiteForUnassign(machine.currentSiteId?._id || '');
+    setIsUnassignModalOpen(true);
+  };
+
+  const confirmReturnMachine = async () => {
+    if (!selectedMachineForUnassign) return;
+    
+    try {
+      const res = await api.post('/movements', {
+        machineUnitId: selectedMachineForUnassign._id,
+        fromLocationType: selectedSiteForUnassign ? 'site' : 'supervisor',
+        fromLocationId: selectedSiteForUnassign || null,
+        toLocationType: 'store',
+        notes: `Returned from supervisor. ${selectedSiteForUnassign ? 'Removed from site.' : ''}`
+      });
+      await api.put(`/movements/${res.data.data._id}/approve`);
+      
+      setIsUnassignModalOpen(false);
+      setSelectedMachineForUnassign(null);
+      setSelectedSiteForUnassign('');
+      
+      fetchMachines();
+      fetchAvailableMachines();
+      alert('Machine returned successfully');
+    } catch (error) {
+      console.error('Error returning machine:', error);
+      alert(error.response?.data?.message || 'Error occurred');
     }
   };
 
@@ -580,6 +605,56 @@ const InchargeDetails = () => {
             Confirm Assignment
           </button>
         </form>
+      </Modal>
+
+      <Modal 
+        isOpen={isUnassignModalOpen} 
+        onClose={() => { setIsUnassignModalOpen(false); setSelectedMachineForUnassign(null); }} 
+        title="Unassign Machine"
+      >
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-600 mb-1">Machine Details:</p>
+            <p className="font-bold text-gray-900">{selectedMachineForUnassign?.machineTypeId?.name}</p>
+            <p className="text-xs font-mono text-gray-500">Serial: {selectedMachineForUnassign?.serialNumber}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Site to Unassign From <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={selectedSiteForUnassign}
+              onChange={e => setSelectedSiteForUnassign(e.target.value)}
+            >
+              <option value="">-- No Specific Site (With Supervisor) --</option>
+              {assignedSites.map(site => (
+                <option key={site._id} value={site._id}>
+                  {site.name} ({site.address?.slice(0, 20)}...)
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-2 italic">
+              Note: The machine will be returned to the main store.
+            </p>
+          </div>
+
+          <div className="flex space-x-3 pt-2">
+            <button
+              onClick={() => { setIsUnassignModalOpen(false); setSelectedMachineForUnassign(null); }}
+              className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmReturnMachine}
+              className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+            >
+              Confirm Unassign
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Challan Details Form Modal */}

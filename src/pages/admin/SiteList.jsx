@@ -128,7 +128,23 @@ const SiteList = () => {
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Sites</h1>
         <div className="flex flex-wrap gap-2">
           <ExportButtons
-            onExcel={() => exportToExcel(enrichedSites, [{key:'name',label:'Site Name'},{key:'status',label:'Status'},{key:'estimatedCost',label:'Estimated Cost'},{key:'givenAmount',label:'Given Amount'},{key:'expenseUsed',label:'Expense Used'},{key:'remainingBalance',label:'Remaining Balance'}], 'sites')}
+            onExcel={() => {
+              const exportData = enrichedSites.map(s => ({
+                ...s,
+                supervisor_name: Array.isArray(s.userId) ? s.userId.map(u => u.name).join(', ') : (s.userId?.name || '-'),
+                operators_list: s.operators || '-'
+              }));
+              exportToExcel(exportData, [
+                { key: 'name', label: 'Site Name' },
+                { key: 'supervisor_name', label: 'Supervisor' },
+                { key: 'operators_list', label: 'Operators' },
+                { key: 'status', label: 'Status' },
+                { key: 'estimatedCost', label: 'Estimated Cost' },
+                { key: 'givenAmount', label: 'Given Amount' },
+                { key: 'expenseUsed', label: 'Expense Used' },
+                { key: 'remainingBalance', label: 'Remaining Balance' }
+              ], 'sites');
+            }}
             onPdf={() => exportToPdf(enrichedSites, [{key:'name',label:'Site Name'},{key:'status',label:'Status'},{key:'estimatedCost',label:'Est. Cost'},{key:'givenAmount',label:'Given'},{key:'remainingBalance',label:'Balance'}], 'Sites Report', 'sites')}
           />
           <button onClick={() => navigate('/admin/create-site')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Create Site</button>
