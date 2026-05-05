@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import FormInput from '../../components/FormInput';
 import DataTable from '../../components/DataTable';
+import Modal from '../../components/Modal';
 import { ExportButtons, exportToExcel, exportToPdf } from '../../utils/exportUtils';
 import api from '../../services/api';
 
@@ -13,6 +14,8 @@ const GiveInstallment = () => {
   const [siteSupervisors, setSiteSupervisors] = useState([]);
   const [filterSiteId, setFilterSiteId] = useState('all');
   const [formData, setFormData] = useState({ siteId: '', receivedBy: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] });
+  const [editingId, setEditingId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchSites();
@@ -53,14 +56,53 @@ const GiveInstallment = () => {
     e.preventDefault();
     if (!formData.receivedBy) return alert('Please select a supervisor.');
     try {
-      await api.post('/installments', formData);
+      if (editingId) {
+        await api.put(`/installments/${editingId}`, formData);
+        setIsModalOpen(false);
+      } else {
+        await api.post('/installments', formData);
+      }
       setFormData({ siteId: '', receivedBy: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] });
+      setEditingId(null);
       setSiteSupervisors([]);
       fetchInstallments();
     } catch (error) {
-      console.error('Error creating installment:', error);
-      alert(error.response?.data?.message || 'Error creating installment.');
+      console.error('Error saving installment:', error);
+      alert(error.response?.data?.message || 'Error saving installment.');
     }
+  };
+
+  const handleEdit = (inst) => {
+    setEditingId(inst._id);
+    const selectedSite = sites.find(s => s._id === (inst.siteId?._id || inst.siteId));
+    const supervisors = selectedSite?.userId || [];
+    setSiteSupervisors(Array.isArray(supervisors) ? supervisors : [supervisors].filter(Boolean));
+    setFormData({
+      siteId: inst.siteId?._id || inst.siteId || '',
+      receivedBy: inst.receivedBy?._id || inst.receivedBy || '',
+      amount: inst.amount,
+      note: inst.note || '',
+      date: new Date(inst.date).toISOString().split('T')[0],
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (inst) => {
+    if (window.confirm('Are you sure you want to delete this installment?')) {
+      try {
+        await api.delete(`/installments/${inst._id}`);
+        fetchInstallments();
+      } catch (error) {
+        console.error('Error deleting installment:', error);
+        alert('Failed to delete installment');
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ siteId: '', receivedBy: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] });
+    setEditingId(null);
+    setSiteSupervisors([]);
   };
 
   const columns = [
@@ -218,8 +260,43 @@ const GiveInstallment = () => {
             ))}
           </select>
         </div>
-        <DataTable columns={columns} data={filteredInstallments} />
+        <DataTable columns={columns} data={filteredInstallments} onEdit={handleEdit} onDelete={handleDelete} />
       </div>
+
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title={editingId ? "Edit Installment" : "Add Installment"}>
+        <form onSubmit={handleSubmit}>
+          <FormInput
+            label="Select Site"
+            type="select"
+            name="siteId"
+            value={formData.siteId}
+            onChange={handleChange}
+            options={sites.map(s => ({ value: s._id, label: s.name }))}
+            required
+          />
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Supervisor</label>
+            <select
+              name="receivedBy"
+              value={formData.receivedBy}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Select Supervisor --</option>
+              {siteSupervisors.map(s => (
+                <option key={s._id} value={s._id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <FormInput label="Amount" type="number" name="amount" value={formData.amount} onChange={handleChange} required />
+          <FormInput label="Date" type="date" name="date" value={formData.date} onChange={handleChange} required />
+          <FormInput label="Note" type="textarea" name="note" value={formData.note} onChange={handleChange} />
+          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-bold">
+            {editingId ? 'Update' : 'Save'} Installment
+          </button>
+        </form>
+      </Modal>
     </DashboardLayout>
   );
 };

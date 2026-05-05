@@ -97,14 +97,22 @@ const AllSites = () => {
         <h1 className="text-2xl font-bold text-gray-900">All Sites</h1>
         <div className="flex gap-2">
           <ExportButtons
-            onExcel={() => exportToExcel(filteredSites, [
-              { key: 'name', label: 'Site Name' },
-              { key: 'userId', label: 'Supervisor' },
-              { key: 'adminId', label: 'Admin' },
-              { key: 'estimatedCost', label: 'Estimated Cost' },
-              { key: 'status', label: 'Status' },
-              { key: 'startDate', label: 'Start Date' },
-            ], 'sites')}
+            onExcel={() => {
+              const data = filteredSites.map(s => ({
+                ...s,
+                supervisor: Array.isArray(s.userId) ? s.userId.map(u => u.name).join(', ') : (s.userId?.name || '-'),
+                adminName: s.adminId?.name || '-',
+              }));
+              exportToExcel(data, [
+                { key: 'name', label: 'Site Name' },
+                { key: 'supervisor', label: 'Supervisor' },
+                { key: 'operators', label: 'Operators' },
+                { key: 'adminName', label: 'Admin' },
+                { key: 'estimatedCost', label: 'Estimated Cost' },
+                { key: 'status', label: 'Status' },
+                { key: 'startDate', label: 'Start Date' },
+              ], 'sites');
+            }}
             onPdf={() => exportToPdf(filteredSites, [
               { key: 'name', label: 'Site Name' },
               { key: 'userId', label: 'Supervisor' },

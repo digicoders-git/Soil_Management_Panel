@@ -7,22 +7,30 @@ import StatusBadge from '../../components/StatusBadge';
 import { ExportButtons, exportToExcel, exportToPdf } from '../../utils/exportUtils';
 import api from '../../services/api';
 
-export const ALL_PERMISSIONS = [
-  { key: 'manage_supervisors', label: 'Manage Supervisors' },
-  { key: 'manage_sites', label: 'Manage Sites' },
+export const MODULES = [
+  { key: 'manage_site_incharge', label: 'Manage Site Incharge' },
+  { key: 'manage_stock_operator', label: 'Manage Stock Operator' },
   { key: 'create_site', label: 'Create Site' },
-  { key: 'manage_machines', label: 'Manage Machines/Stocks' },
-  { key: 'manage_operators', label: 'Manage Operators' },
-  { key: 'give_installments', label: 'Give Installments' },
-  { key: 'view_expenses', label: 'View Expenses' },
-  { key: 'manage_movements', label: 'Manage Stock Movements' },
-  { key: 'view_reports', label: 'View Reports' },
+  { key: 'view_all_site', label: 'View all Site' },
+  { key: 'stock', label: 'Stock (Type/Units)' },
+  { key: 'all_stock', label: 'All Stock' },
+  { key: 'stock_movement', label: 'Stock Movement' },
+  { key: 'installment', label: 'Installment' },
+  { key: 'expenses', label: 'Expenses' },
+  { key: 'report', label: 'Report' },
+];
+
+export const ACTIONS = [
+  { key: 'add', label: 'Add' },
+  { key: 'view', label: 'View' },
+  { key: 'edit', label: 'Edited' },
+  { key: 'delete', label: 'Deleted' },
 ];
 
 const AdminManagement = () => {
   const [admins, setAdmins] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', permissions: [] });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', permissions: {} });
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => { fetchAdmins(); }, []);
@@ -36,17 +44,28 @@ const AdminManagement = () => {
     }
   };
 
-  const togglePermission = (key) => {
-    setFormData(prev => ({
-      ...prev,
-      permissions: prev.permissions.includes(key)
-        ? prev.permissions.filter(p => p !== key)
-        : [...prev.permissions, key]
-    }));
+  const togglePermission = (moduleKey, actionKey) => {
+    setFormData(prev => {
+      const newPermissions = { ...prev.permissions };
+      if (!newPermissions[moduleKey]) {
+        newPermissions[moduleKey] = { add: false, view: false, edit: false, delete: false };
+      }
+      newPermissions[moduleKey] = {
+        ...newPermissions[moduleKey],
+        [actionKey]: !newPermissions[moduleKey][actionKey]
+      };
+      return { ...prev, permissions: newPermissions };
+    });
   };
 
-  const selectAll = () => setFormData(prev => ({ ...prev, permissions: ALL_PERMISSIONS.map(p => p.key) }));
-  const clearAll = () => setFormData(prev => ({ ...prev, permissions: [] }));
+  const selectAll = () => {
+    const all = {};
+    MODULES.forEach(m => {
+      all[m.key] = { add: true, view: true, edit: true, delete: true };
+    });
+    setFormData(prev => ({ ...prev, permissions: all }));
+  };
+  const clearAll = () => setFormData(prev => ({ ...prev, permissions: {} }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,7 +91,7 @@ const AdminManagement = () => {
       email: admin.email,
       password: '',
       phone: admin.phone || '',
-      permissions: admin.permissions || [],
+      permissions: admin.permissions || {},
     });
     setIsModalOpen(true);
   };
@@ -89,7 +108,7 @@ const AdminManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', email: '', password: '', phone: '', permissions: [] });
+    setFormData({ name: '', email: '', password: '', phone: '', permissions: {} });
     setEditingId(null);
   };
 
@@ -100,9 +119,13 @@ const AdminManagement = () => {
     {
       key: 'permissions',
       label: 'Permissions',
-      render: (val) => val?.length > 0
-        ? <span className="text-xs text-indigo-600 font-semibold">{val.length} permissions</span>
-        : <span className="text-xs text-gray-400">All Access</span>
+      render: (val) => {
+        const count = Object.values(val || {}).reduce((acc, curr) => 
+          acc + Object.values(curr).filter(Boolean).length, 0);
+        return count > 0
+          ? <span className="text-xs text-indigo-600 font-semibold">{count} active</span>
+          : <span className="text-xs text-gray-400">No Access</span>
+      }
     },
     {
       key: 'isActive',
@@ -137,7 +160,6 @@ const AdminManagement = () => {
           <FormInput label="Password" type="password" name="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required={!editingId} />
           <FormInput label="Phone" name="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
 
-          {/* Permissions */}
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-gray-700">Permissions</label>
@@ -147,23 +169,35 @@ const AdminManagement = () => {
                 <button type="button" onClick={clearAll} className="text-xs text-red-500 hover:underline font-semibold">Clear All</button>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mb-3">Leave empty to give full access (same as before)</p>
-            <div className="grid grid-cols-1 gap-2 border border-gray-200 rounded-lg p-3 bg-gray-50 max-h-56 overflow-y-auto">
-              {ALL_PERMISSIONS.map(p => (
-                <label key={p.key} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${formData.permissions.includes(p.key) ? 'bg-indigo-50 border border-indigo-200' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}>
-                  <input
-                    type="checkbox"
-                    checked={formData.permissions.includes(p.key)}
-                    onChange={() => togglePermission(p.key)}
-                    className="h-4 w-4 text-indigo-600 rounded"
-                  />
-                  <span className="text-sm text-gray-700">{p.label}</span>
-                </label>
-              ))}
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Module</th>
+                    {ACTIONS.map(a => (
+                      <th key={a.key} className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">{a.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {MODULES.map(m => (
+                    <tr key={m.key}>
+                      <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-700">{m.label}</td>
+                      {ACTIONS.map(a => (
+                        <td key={a.key} className="px-2 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.permissions?.[m.key]?.[a.key] || false}
+                            onChange={() => togglePermission(m.key, a.key)}
+                            className="h-3.5 w-3.5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {formData.permissions.length > 0 && (
-              <p className="text-xs text-indigo-600 mt-1 font-semibold">{formData.permissions.length} of {ALL_PERMISSIONS.length} permissions selected</p>
-            )}
           </div>
 
           <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">

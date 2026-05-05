@@ -19,6 +19,7 @@ const InchargeDetails = () => {
   const [isChallanFormOpen, setIsChallanFormOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
   const [assignForm, setAssignForm] = useState({ unitIds: [], operatorId: '', quantity: 1 });
   const [challanDetails, setChallanDetails] = useState({
     consignorName: 'Arun Soil Lab Private Limited',
@@ -328,7 +329,7 @@ const InchargeDetails = () => {
   };
 
   const handleReturnMachine = async (machine) => {
-    if (window.confirm('Return this machine to store? This will remove it from this supervisor.')) {
+    if (window.confirm(`Return this machine (${machine.serialNumber}) to store?`)) {
       try {
         const res = await api.post('/movements', {
           machineUnitId: machine._id,
@@ -348,10 +349,42 @@ const InchargeDetails = () => {
     }
   };
 
+  const handleBulkUnassign = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to return ${selectedIds.length} machines to store?`)) return;
+    
+    try {
+      await Promise.all(selectedIds.map(async (id) => {
+        const machine = machines.find(m => m._id === id);
+        if (!machine) return;
+        const res = await api.post('/movements', {
+          machineUnitId: id,
+          fromLocationType: machine.status === 'assigned' ? 'site' : 'supervisor',
+          fromLocationId: machine.currentSiteId?._id || null,
+          toLocationType: 'store',
+          notes: 'Bulk returned from supervisor'
+        });
+        await api.put(`/movements/${res.data.data._id}/approve`);
+      }));
+      setSelectedIds([]);
+      fetchMachines();
+      fetchAvailableMachines();
+      alert('Selected machines returned successfully');
+    } catch (error) {
+      console.error('Error in bulk unassign:', error);
+      alert('Failed to return some machines');
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
   const machineColumns = [
     { key: 'machineTypeId', label: 'Stock Type', render: (val) => val?.name || '-' },
     { key: 'quantity', label: 'Qty', render: (val) => <span className="font-semibold text-indigo-600">{val}</span> },
     { key: 'serialNumbers', label: 'Serial Nos.', render: (val) => <span className="text-xs font-mono text-gray-500">{Array.isArray(val) ? val.join(', ') : val}</span> },
+    { key: 'currentSiteId', label: 'Current Site', render: (val) => val?.name || <span className="text-gray-400">Not at site</span> },
     { key: 'condition', label: 'Condition' },
     { key: 'status', label: 'Status', render: (val) => <StatusBadge status={val} /> },
   ];
@@ -392,15 +425,23 @@ const InchargeDetails = () => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-800">Assigned Stocks</h2>
         <div className="flex space-x-2">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkUnassign}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
+            >
+              Unassign Selected ({selectedIds.length})
+            </button>
+          )}
           <button
             onClick={() => setIsAssignModalOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
           >
             Assign Stock
           </button>
           <button
             onClick={handleDownloadChallan}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
           >
             Download Challan
           </button>
@@ -413,6 +454,13 @@ const InchargeDetails = () => {
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3">
+                    <input
+                      type="checkbox"
+                      checked={machines.length > 0 && selectedIds.length === machines.length}
+                      onChange={() => setSelectedIds(selectedIds.length === machines.length ? [] : machines.map(m => m._id))}
+                    />
+                  </th>
                   {machineColumns.map(col => (
                     <th key={col.key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{col.label}</th>
                   ))}
@@ -420,8 +468,15 @@ const InchargeDetails = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {groupedMachines.map((machine) => (
-                  <tr key={machine._id}>
+                {machines.map((machine) => (
+                  <tr key={machine._id} className={selectedIds.includes(machine._id) ? 'bg-indigo-50' : ''}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(machine._id)}
+                        onChange={() => toggleSelect(machine._id)}
+                      />
+                    </td>
                     {machineColumns.map(col => (
                       <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm">
                         {col.render ? col.render(machine[col.key], machine) : machine[col.key]}

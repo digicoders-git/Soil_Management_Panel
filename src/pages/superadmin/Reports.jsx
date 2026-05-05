@@ -51,20 +51,52 @@ const Reports = () => {
         <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
         <div className="flex gap-2">
           <ExportButtons
-            onExcel={() => exportToExcel([...expenses, ...installments], [
-              { key: 'siteId', label: 'Site' },
-              { key: 'amount', label: 'Amount' },
-              { key: 'category', label: 'Category' },
-              { key: 'description', label: 'Description/Note' },
-              { key: 'date', label: 'Date' },
-            ], 'reports')}
-            onPdf={() => exportToPdf([...expenses, ...installments], [
-              { key: 'siteId', label: 'Site' },
-              { key: 'amount', label: 'Amount' },
-              { key: 'category', label: 'Category' },
-              { key: 'description', label: 'Description' },
-              { key: 'date', label: 'Date' },
-            ], 'Reports & Analytics', 'reports')}
+            onExcel={() => {
+              const combined = [
+                ...expenses.map(e => ({
+                  ...e,
+                  type: 'Expense',
+                  supervisor: e.userId?.name || '-',
+                  siteName: e.siteId?.name || '-',
+                  expense_amt: e.amount,
+                  advance_amt: 0
+                })),
+                ...installments.map(i => ({
+                  ...i,
+                  type: 'Advance',
+                  supervisor: i.receivedBy?.name || '-',
+                  siteName: i.siteId?.name || '-',
+                  expense_amt: 0,
+                  advance_amt: i.amount,
+                  description: i.note
+                }))
+              ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+              exportToExcel(combined, [
+                { key: 'siteName', label: 'Site' },
+                { key: 'date', label: 'Date' },
+                { key: 'supervisor', label: 'Supervisor' },
+                { key: 'type', label: 'Type' },
+                { key: 'advance_amt', label: 'Advance Given' },
+                { key: 'expense_amt', label: 'Expense Amount' },
+                { key: 'category', label: 'Category' },
+                { key: 'description', label: 'Description/Note' },
+              ], 'reports');
+            }}
+            onPdf={() => {
+              const combined = [
+                ...expenses.map(e => ({ ...e, type: 'Expense', supervisor: e.userId?.name || '-' })),
+                ...installments.map(i => ({ ...i, type: 'Advance', supervisor: i.receivedBy?.name || '-', description: i.note }))
+              ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+              exportToPdf(combined, [
+                { key: 'siteId', label: 'Site' },
+                { key: 'date', label: 'Date' },
+                { key: 'supervisor', label: 'Supervisor' },
+                { key: 'type', label: 'Type' },
+                { key: 'amount', label: 'Amount' },
+              ], 'Reports & Analytics', 'reports');
+            }}
           />
         </div>
       </div>
