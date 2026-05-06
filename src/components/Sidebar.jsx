@@ -172,34 +172,51 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const getMenu = () => {
     if (user?.role === 'superadmin') return superAdminMenu;
     if (user?.role === 'admin') {
-      const perms = user?.permissions || [];
+      const perms = user?.permissions || {};
+      
+      // Helper to check if any permission exists for a module
+      const hasAnyPerm = (moduleKey) => {
+        const modulePerms = perms[moduleKey];
+        if (!modulePerms) return false;
+        return Object.values(modulePerms).some(v => v === true);
+      };
+
       // Empty permissions = full access (superadmin ne koi restriction nahi lagayi)
-      if (perms.length === 0) return adminMenu;
+      if (Object.keys(perms).length === 0) return adminMenu;
 
       return adminMenu.filter(item => {
         if (item.path === '/admin/dashboard') return true;
-        if (item.name === 'Site Incharge') return perms.includes('manage_supervisors');
-        if (item.name === 'Stock Operators') return perms.includes('manage_operators');
-        if (item.name === 'Sites') return perms.includes('manage_sites') || perms.includes('create_site');
-        if (item.name === 'Stocks') return perms.includes('manage_machines');
-        if (item.name === 'Stock Movements') return perms.includes('manage_movements');
-        if (item.name === 'Installments') return perms.includes('give_installments');
-        if (item.name === 'Expenses') return perms.includes('view_expenses');
-        if (item.name === 'Reports') return perms.includes('view_reports') || perms.includes('manage_sites'); // Allow reports if they can manage sites or see reports
+        if (item.name === 'Site Incharge') return hasAnyPerm('manage_site_incharge');
+        if (item.name === 'Stock Operators') return hasAnyPerm('manage_stock_operator');
+        if (item.name === 'Sites') return hasAnyPerm('view_all_site') || hasAnyPerm('create_site');
+        if (item.name === 'Stocks') return hasAnyPerm('stock') || hasAnyPerm('stock_units') || hasAnyPerm('all_stock');
+        if (item.name === 'Stock Movements') return hasAnyPerm('stock_movement');
+        if (item.name === 'Installments') return hasAnyPerm('installment');
+        if (item.name === 'Expenses') return hasAnyPerm('expenses');
+        if (item.name === 'Reports') return hasAnyPerm('report') || hasAnyPerm('view_all_site'); 
         if (item.name === 'My Funds') return true; // Always show My Funds to Admins
         if (item.name === 'Profile') return true; // Always show Profile
         return false; 
       }).map(item => {
         if (item.name === 'Sites' && item.children) {
           const children = item.children.filter(c => {
-            if (c.name === 'Create Site') return perms.includes('create_site');
-            if (c.name === 'View All Sites') return perms.includes('manage_sites');
+            if (c.name === 'Create Site') return perms['create_site']?.add || perms['create_site']?.view;
+            if (c.name === 'View All Sites') return perms['view_all_site']?.view;
+            return false;
+          });
+          return { ...item, children };
+        }
+        if (item.name === 'Stocks' && item.children) {
+          const children = item.children.filter(c => {
+            if (c.name === 'Add Stocks Types') return perms['stock']?.add || perms['stock']?.view;
+            if (c.name === 'Add Stocks Units') return perms['stock_units']?.add || perms['stock_units']?.view;
+            if (c.name === 'All Stocks') return perms['all_stock']?.view;
             return false;
           });
           return { ...item, children };
         }
         return item;
-      }).filter(item => !item.children || item.children.length > 0); // empty children wale parent bhi hide karo
+      }).filter(item => !item.children || item.children.length > 0);
     }
     return userMenu;
   };
