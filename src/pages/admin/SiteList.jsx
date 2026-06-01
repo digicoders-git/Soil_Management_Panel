@@ -24,15 +24,15 @@ const SiteList = () => {
 
   const fetchSites = async () => {
     try {
-      const [sitesRes, installmentsRes, expensesRes] = await Promise.all([
+      const [sitesRes, installmentsRes, expensesRes] = await Promise.allSettled([
         api.get('/sites'),
         api.get('/installments'),
         api.get('/expenses'),
       ]);
 
-      const sitesData = sitesRes.data.data;
-      const installments = installmentsRes.data.data;
-      const expenses = expensesRes.data.data;
+      const sitesData = sitesRes.status === 'fulfilled' ? sitesRes.value.data.data : [];
+      const installments = installmentsRes.status === 'fulfilled' ? installmentsRes.value.data.data : [];
+      const expenses = expensesRes.status === 'fulfilled' ? expensesRes.value.data.data : [];
 
       const enriched = sitesData.map(site => {
         const siteInstallments = installments.filter(i => i.siteId?._id === site._id || i.siteId === site._id);

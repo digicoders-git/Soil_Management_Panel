@@ -25,6 +25,7 @@ const CreateSite = () => {
       navigate('/admin/sites');
     } catch (error) {
       console.error('Error creating site:', error);
+      alert(error.response?.data?.message || 'Error creating site. Please try again.');
     }
   };
 

@@ -62,7 +62,7 @@ const SiteDetails = () => {
 
   const fetchSiteDetails = async () => {
     try {
-      const [siteRes, installmentsRes, expensesRes, reportsRes, updatesRes, settlementsRes] = await Promise.all([
+      const [siteRes, installmentsRes, expensesRes, reportsRes, updatesRes, settlementsRes] = await Promise.allSettled([
         api.get(`/sites/${id}`),
         api.get(`/installments?siteId=${id}`),
         api.get(`/expenses?siteId=${id}`),
@@ -71,12 +71,12 @@ const SiteDetails = () => {
         api.get(`/site-settlements?siteId=${id}`)
       ]);
 
-      setSite(siteRes.data.data);
-      setInstallments(installmentsRes.data.data || []);
-      setExpenses(expensesRes.data.data || []);
-      setReports(reportsRes.data.data || []);
-      setDailyUpdates(updatesRes.data.data || []);
-      setSettlements(settlementsRes.data.data || []);
+      if (siteRes.status === 'fulfilled') setSite(siteRes.value.data.data);
+      setInstallments(installmentsRes.status === 'fulfilled' ? installmentsRes.value.data.data || [] : []);
+      setExpenses(expensesRes.status === 'fulfilled' ? expensesRes.value.data.data || [] : []);
+      setReports(reportsRes.status === 'fulfilled' ? reportsRes.value.data.data || [] : []);
+      setDailyUpdates(updatesRes.status === 'fulfilled' ? updatesRes.value.data.data || [] : []);
+      setSettlements(settlementsRes.status === 'fulfilled' ? settlementsRes.value.data.data || [] : []);
     } catch (error) {
       console.error('Error fetching site details:', error);
     }
