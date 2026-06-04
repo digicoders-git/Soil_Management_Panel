@@ -59,6 +59,8 @@ const Allmachines = () => {
             const availableUnits = typeUnits.filter(u => u.status === 'available' && u.condition !== 'maintenance' && u.condition !== 'damaged').length;
             const assignedUnits = typeUnits.filter(u => u.status === 'assigned').length;
             const repairUnits = typeUnits.filter(u => u.status === 'repair' || u.condition === 'maintenance' || u.condition === 'damaged').length;
+            const missingUnits = typeUnits.filter(u => u.status === 'missing').length;
+            const rejectedUnits = typeUnits.filter(u => u.status === 'rejected').length;
             return {
                 _id: type._id,
                 name: type.name,
@@ -67,6 +69,8 @@ const Allmachines = () => {
                 availableQuantity: availableUnits,
                 assignedQuantity: assignedUnits,
                 repairQuantity: repairUnits,
+                missingQuantity: missingUnits,
+                rejectionQuantity: rejectedUnits,
             };
         }).filter(Boolean).filter(item =>
             !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -81,6 +85,8 @@ const Allmachines = () => {
         { key: 'availableQuantity', label: 'Available', render: (val) => <span className="font-semibold text-green-600">{val}</span> },
         { key: 'assignedQuantity', label: 'Assigned', render: (val) => <span className="font-semibold text-blue-600">{val}</span> },
         { key: 'repairQuantity', label: 'In Repair', render: (val) => <span className="font-semibold text-red-500">{val}</span> },
+        { key: 'rejectionQuantity', label: 'Rejection', render: (val) => <span className="font-semibold text-gray-500">{val}</span> },
+        { key: 'missingQuantity', label: 'Missing', render: (val) => <span className="font-semibold text-orange-500">{val}</span> },
     ];
 
     const clearFilters = () => {
@@ -95,8 +101,8 @@ const Allmachines = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Stocks Overview</h1>
                 <ExportButtons
-                    onExcel={() => exportToExcel(summary, [{key:'name',label:'Stock Type'},{key:'category',label:'Category'},{key:'totalQuantity',label:'Total'},{key:'availableQuantity',label:'Available'},{key:'assignedQuantity',label:'Assigned'},{key:'repairQuantity',label:'In Repair'}], 'all-stocks')}
-                    onPdf={() => exportToPdf(summary, [{key:'name',label:'Stock Type'},{key:'category',label:'Category'},{key:'totalQuantity',label:'Total'},{key:'availableQuantity',label:'Available'},{key:'assignedQuantity',label:'Assigned'},{key:'repairQuantity',label:'In Repair'}], 'All Stocks Overview', 'all-stocks')}
+                    onExcel={() => exportToExcel(summary, [{key:'name',label:'Stock Type'},{key:'category',label:'Category'},{key:'totalQuantity',label:'Total'},{key:'availableQuantity',label:'Available'},{key:'assignedQuantity',label:'Assigned'},{key:'repairQuantity',label:'In Repair'},{key:'rejectionQuantity',label:'Rejection'},{key:'missingQuantity',label:'Missing'}], 'all-stocks')}
+                    onPdf={() => exportToPdf(summary, [{key:'name',label:'Stock Type'},{key:'category',label:'Category'},{key:'totalQuantity',label:'Total'},{key:'availableQuantity',label:'Available'},{key:'assignedQuantity',label:'Assigned'},{key:'repairQuantity',label:'In Repair'},{key:'rejectionQuantity',label:'Rejection'},{key:'missingQuantity',label:'Missing'}], 'All Stocks Overview', 'all-stocks')}
                 />
             </div>
 
