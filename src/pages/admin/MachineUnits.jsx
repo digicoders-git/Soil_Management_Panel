@@ -183,7 +183,7 @@ const MachineUnits = () => {
                     <FormInput label="Purchase Cost (₹)" type="number" name="purchaseCost" value={unitForm.purchaseCost} onChange={e => setUnitForm({ ...unitForm, purchaseCost: e.target.value })} required />
                     <FormInput label="Purchase Date" type="date" name="purchaseDate" value={unitForm.purchaseDate} onChange={e => setUnitForm({ ...unitForm, purchaseDate: e.target.value })} />
                     <FormInput label="Condition" type="select" name="condition" value={unitForm.condition} onChange={e => setUnitForm({ ...unitForm, condition: e.target.value })} options={[
-                        { value: 'good', label: 'Good' }, { value: 'damaged', label: 'Damaged' }, { value: 'maintenance', label: 'Under Maintenance' }
+                        { value: 'good', label: 'Good' }, { value: 'damaged', label: 'Damaged' }, { value: 'maintenance', label: 'Under Maintenance' }, { value: 'missing', label: 'Missing' }, { value: 'rejected', label: 'Rejected' }
                     ]} />
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">AMC Document <span className="text-gray-400 font-normal">(optional)</span></label>
