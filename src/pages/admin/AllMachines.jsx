@@ -39,8 +39,8 @@ const Allmachines = () => {
     const filteredUnits = useMemo(() => {
         return units.filter(u => {
             // New/Old filter
-            if (stockFilter === 'new' && !u.isNew) return false;
-            if (stockFilter === 'old' && u.isNew) return false;
+            if (stockFilter === 'new' && !u.isNewMachine) return false;
+            if (stockFilter === 'old' && u.isNewMachine) return false;
 
             // Month/Year filter based on purchaseDate
             const date = new Date(u.purchaseDate || u.createdAt);
@@ -54,13 +54,13 @@ const Allmachines = () => {
     const summary = useMemo(() => {
         return types.map(type => {
 
-            const typeUnits = filteredUnits.filter(u => u.machineTypeId && u.machineTypeId._id === type._id);
+            const typeUnits = filteredUnits.filter(u => u.machineTypeId && (u.machineTypeId._id === type._id || u.machineTypeId === type._id));
             if (typeUnits.length === 0) return null;
-            const availableUnits = typeUnits.filter(u => u.status === 'available' && u.condition !== 'maintenance' && u.condition !== 'damaged').length;
+            const availableUnits = typeUnits.filter(u => u.status === 'available' && u.condition !== 'maintenance' && u.condition !== 'damaged' && u.condition !== 'missing' && u.condition !== 'rejected').length;
             const assignedUnits = typeUnits.filter(u => u.status === 'assigned').length;
             const repairUnits = typeUnits.filter(u => u.status === 'repair' || u.condition === 'maintenance' || u.condition === 'damaged').length;
-            const missingUnits = typeUnits.filter(u => u.status === 'missing').length;
-            const rejectedUnits = typeUnits.filter(u => u.status === 'rejected').length;
+            const missingUnits = typeUnits.filter(u => u.status === 'missing' || u.condition === 'missing').length;
+            const rejectedUnits = typeUnits.filter(u => u.status === 'rejected' || u.condition === 'rejected').length;
             return {
                 _id: type._id,
                 name: type.name,
