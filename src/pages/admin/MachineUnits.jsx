@@ -12,7 +12,7 @@ const MachineUnits = () => {
 
     const [selectedIds, setSelectedIds] = useState([]);
     const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
-    const [unitForm, setUnitForm] = useState({ machineTypeId: '', serialNumber: '', purchaseCost: '', purchaseDate: '', condition: 'good', quantity: 1 });
+    const [unitForm, setUnitForm] = useState({ machineTypeId: '', serialNumber: '', purchaseCost: '', purchaseDate: '', condition: 'good', conditionRemarks: '', quantity: 1 });
     const [amcDocument, setAmcDocument] = useState(null);
     const [editingId, setEditingId] = useState(null);
 
@@ -47,7 +47,7 @@ const MachineUnits = () => {
                 await api.post('/machine-units', payload, config);
             }
             setIsUnitModalOpen(false);
-            setUnitForm({ machineTypeId: '', serialNumber: '', purchaseCost: '', purchaseDate: '', condition: 'good', quantity: 1 });
+            setUnitForm({ machineTypeId: '', serialNumber: '', purchaseCost: '', purchaseDate: '', condition: 'good', conditionRemarks: '', quantity: 1 });
             setAmcDocument(null);
             setEditingId(null);
             fetchData();
@@ -65,6 +65,7 @@ const MachineUnits = () => {
             purchaseCost: unit.purchaseCost || '',
             purchaseDate: unit.purchaseDate ? new Date(unit.purchaseDate).toISOString().split('T')[0] : '',
             condition: unit.condition || 'good',
+            conditionRemarks: unit.conditionRemarks || '',
             quantity: unit.quantity || 1
         });
         setAmcDocument(null);
@@ -185,6 +186,9 @@ const MachineUnits = () => {
                     <FormInput label="Condition" type="select" name="condition" value={unitForm.condition} onChange={e => setUnitForm({ ...unitForm, condition: e.target.value })} options={[
                         { value: 'good', label: 'Good' }, { value: 'damaged', label: 'Damaged' }, { value: 'maintenance', label: 'Under Maintenance' }, { value: 'missing', label: 'Missing' }, { value: 'rejected', label: 'Rejected' }
                     ]} />
+                    {unitForm.condition !== 'good' && (
+                        <FormInput label="Specify Details / Remarks" type="text" name="conditionRemarks" value={unitForm.conditionRemarks} onChange={e => setUnitForm({ ...unitForm, conditionRemarks: e.target.value })} required />
+                    )}
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">AMC Document <span className="text-gray-400 font-normal">(optional)</span></label>
                         <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${

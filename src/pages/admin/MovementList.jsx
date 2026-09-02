@@ -261,8 +261,8 @@ const MovementList = () => {
           return acc;
         }, {})
       );
-      const page1Rows = grouped.slice(0, 12);
-      const page2Rows = grouped.slice(12);
+      const page1Rows = grouped.slice(0, 25);
+      const page2Rows = grouped.slice(25);
       const rowStartY = 432;
       const rowHeight = 18;
 
@@ -324,7 +324,7 @@ const MovementList = () => {
         ...(page2Rows.length === 0 ? totalsTexts(rowStartY + page1Rows.length * rowHeight + 65 + 113) : []),
       ];
 
-      const canvas1 = await renderPageToCanvas('/539_page-0002.jpg', page1Texts);
+      const canvas1 = await renderPageToCanvas('/539_page-0001.jpg', page1Texts);
       const pdf = new jsPDF({
         orientation: canvas1.width > canvas1.height ? 'landscape' : 'portrait',
         unit: 'px',
@@ -335,16 +335,16 @@ const MovementList = () => {
 
       if (page2Rows.length > 0) {
         const page2Texts = page2Rows.flatMap((m, i) => {
-          const y = 120 + i * rowHeight;
+          const y = 250 + i * rowHeight;
           return [
-            { x: 88,  y, text: 12 + i + 1, align: 'center' },
-            { x: 150, y, text: m.machineTypeId?.name || '-' },
-            { x: 438, y, text: m.quantity, align: 'center' },
-            { x: 58,  y, text: m.purchaseCost || '', align: 'center' },
-            { x: 605, y, text: m.totalCost || '', align: 'center' },
+            { x: 115, y, text: 25 + i + 1, align: 'center' },
+            { x: 152, y, text: m.machineTypeId?.name || '-' },
+            { x: 447, y, text: m.quantity, align: 'center' },
+            { x: 572, y, text: m.purchaseCost || '', align: 'center' },
+            { x: 682, y, text: m.totalCost || '', align: 'center' },
           ];
         });
-        const p2TotalsY = 120 + page2Rows.length * rowHeight + 4;
+        const p2TotalsY = 250 + page2Rows.length * rowHeight + 4;
         page2Texts.push(...totalsTexts(p2TotalsY));
         const canvas2 = await renderPageToCanvas('/539_page-0002.jpg', page2Texts);
         pdf.addPage([canvas2.width, canvas2.height]);
