@@ -319,15 +319,40 @@ const InchargeDetails = () => {
     try {
       if (assignForm.unitIds.length === 0) return alert('Select at least one unit');
 
-      await Promise.all(assignForm.unitIds.map(unitId =>
+      let finalUnitIds = [...assignForm.unitIds];
+
+      // Auto-fill logic if user selects exactly 1 unit and specifies a quantity > 1
+      if (assignForm.unitIds.length === 1 && assignForm.quantity > 1) {
+        const selectedUnitId = assignForm.unitIds[0];
+        const selectedUnit = availableMachines.find(m => m._id === selectedUnitId);
+        
+        if (selectedUnit) {
+          const typeId = selectedUnit.machineTypeId?._id || selectedUnit.machineTypeId;
+          // Find identical available machines (same type) excluding the one already selected
+          const sameTypeMachines = availableMachines.filter(m => 
+            (m.machineTypeId?._id || m.machineTypeId) === typeId && 
+            m._id !== selectedUnitId
+          );
+          
+          const neededAdditional = assignForm.quantity - 1;
+          if (sameTypeMachines.length < neededAdditional) {
+            return alert(`Not enough units available! You need ${neededAdditional} more of this type, but only ${sameTypeMachines.length} are available.`);
+          }
+          
+          // Grab the required number of additional units
+          const additionalIds = sameTypeMachines.slice(0, neededAdditional).map(m => m._id);
+          finalUnitIds = [...finalUnitIds, ...additionalIds];
+        }
+      }
+
+      await Promise.all(finalUnitIds.map(unitId =>
         api.post('/movements', {
           machineUnitId: unitId,
           fromLocationType: 'store',
           toLocationType: 'supervisor',
           notes: 'Pre-assigned to supervisor by admin',
           operatorId: assignForm.operatorId,
-          assignedUserId: id,
-          quantity: assignForm.quantity
+          assignedUserId: id
         }).then(res => api.put(`/movements/${res.data.data._id}/approve`))
       ));
 
