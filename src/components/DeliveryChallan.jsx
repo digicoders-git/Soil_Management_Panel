@@ -1,26 +1,5 @@
 import React, { forwardRef } from 'react';
 
-const T = ({ top, left, width, align = 'left', bold, children }) => (
-  <span style={{
-    position: 'absolute',
-    top,
-    left,
-    width,
-    fontFamily: "'Courier New', Courier, monospace",
-    fontSize: 12,
-    color: 'black',
-    textAlign: align,
-    display: 'inline-block',
-    padding: '0 2px',
-    lineHeight: '1.4',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    fontWeight: bold ? 'bold' : 'normal',
-  }}>
-    {children}
-  </span>
-);
-
 const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = {} }, ref) => {
   const today = challanDetails.challanDate || new Date().toLocaleDateString('en-IN');
   const challanNo = challanDetails.challanNo || `ASL-${Date.now().toString().slice(-6)}`;
@@ -40,11 +19,6 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
     }, {})
   );
 
-  const page1Rows = groupedMachines.slice(0, 12);
-  const page2Rows = groupedMachines.slice(12);
-  const rowStartY = 432;
-  const rowHeight = 18;
-
   const totalQty    = groupedMachines.reduce((s, m) => s + m.quantity, 0);
   const totalAmt    = groupedMachines.reduce((s, m) => s + (Number(m.totalCost) || 0), 0);
 
@@ -56,148 +30,124 @@ const DeliveryChallan = forwardRef(({ incharge, machines = [], challanDetails = 
   const totalGst    = gstType === 'cgst_sgst' ? cgst + sgst : igst;
   const netAmount   = Math.round((totalAmt + totalGst) * 100) / 100;
 
-  // totals row appears after last data row on whichever page is last
-  const lastPage1RowTop = rowStartY + (page1Rows.length - 1) * rowHeight + 53;
-  const totalsTop = page2Rows.length > 0 ? null : lastPage1RowTop + rowHeight + 450;
-
   return (
     <div ref={ref} className="flex flex-col items-center gap-8 py-10 bg-gray-200">
-
-      {/* PAGE 1 */}
-      <div className="challan-page relative w-[800px] shadow-2xl bg-white">
-        <img src="/539_page-0001.jpg" alt="Challan Page 1" className="block w-full" />
-
-        {/* Consignor */}
-        <T top={250} left={150} width={240}>{challanDetails.consignorName || ''}</T>
-        {(() => {
-          const addr = challanDetails.consignorAddress || '';
-          const mid = addr.lastIndexOf(' ', Math.ceil(addr.length / 2));
-          const split = mid === -1 ? Math.ceil(addr.length / 2) : mid;
-          return (
-            <>
-              <T top={265} left={150} width={240}>{addr.slice(0, split).trim()}</T>
-              <T top={279} left={150} width={240}>{addr.slice(split).trim()}</T>
-            </>
-          );
-        })()}
-        <T top={305} left={150} width={250}>{challanDetails.consignorPincode || ''}</T>
-        <T top={322} left={150} width={250}>{challanDetails.consignorGstin || ''}</T>
-        <T top={340} left={150} width={250}>{challanDetails.consignorContact || ''}</T>
-
-        {/* Consignee */}
-        <T top={360} left={150} width={310}>{challanDetails.consigneeName || incharge?.name || ''}</T>
-        <T top={375} left={150} width={310}>{challanDetails.consigneeAddress || ''}</T>
-        <T top={412} left={150} width={250}>{challanDetails.consigneePincode || ''}</T>
-        <T top={430} left={150} width={250}>{challanDetails.consigneeGstin || ''}</T>
-        <T top={449} left={150} width={250}>{challanDetails.consigneeContact || ''}</T>
-
-        {/* Right side fields */}
-        <T top={253} left={520} width={100}>{challanNo}</T>
-        <T top={261} left={645} width={85}>{today}</T>
-        <T top={281} left={500} width={100}>{challanDetails.suppliersRef || ''}</T>
-        <T top={288} left={645} width={85}>{challanDetails.othersRef || ''}</T>
-        <T top={321} left={505} width={100}>{challanDetails.buyersOrderNo || ''}</T>
-        <T top={321} left={645} width={85}>{challanDetails.buyersOrderDate || ''}</T>
-        <T top={360} left={515} width={100}>{challanDetails.dispatchDocNo || ''}</T>
-        <T top={388} left={645} width={140}>{challanDetails.destination || ''}</T>
-        <T top={388} left={520} width={260}>{challanDetails.dispatchThrough || ''}</T>
-        <T top={412} left={460} width={260}>{challanDetails.vehicle || ''}</T>
-        <T top={430} left={480} width={260}>{challanDetails.driverName || ''}</T>
-        <T top={448} left={495} width={260}>{challanDetails.driverContact || ''}</T>
-
-        {/* Table Rows */}
-        {Array.from({ length: 12 }).map((_, i) => {
-          const m = page1Rows[i];
-          const top = rowStartY + i * rowHeight + 53;
-          const unitCost = m ? Number(m.purchaseCost) || 0 : '';
-          const totalCost = m ? Number(m.totalCost) || 0 : '';
-          return (
-            <React.Fragment key={i}>
-              <T top={top} left={88}  width={55}  align="center">{m ? i + 1 : ''}</T>
-              <T top={top} left={150} width={280}>{m ? (m.machineTypeId?.name || '-') : ''}</T>
-              <T top={top} left={400} width={95}  align="center">{m ? m.quantity : ''}</T>
-              <T top={top} left={532} width={80}  align="center">{m ? unitCost : ''}</T>
-              <T top={top} left={605} width={155} align="center">{m ? totalCost : ''}</T>
-            </React.Fragment>
-          );
-        })}
-
-        {/* Totals — only on page 1 if no page 2 */}
-        {page2Rows.length === 0 && totalsTop && (
-          <>
-            <T top={totalsTop}      left={400} width={95}  align="center">{totalQty}</T>
-            <T top={totalsTop}      left={605} width={155} align="center">{totalAmt.toFixed(2)}</T>
-            <T top={totalsTop - 3} left={150} width={200} bold>Total Quantity</T>
-            <T top={totalsTop - 3} left={530} width={200} bold>Total Amount</T>
-            {gstType === 'igst' ? (
-              <>
-                <T top={totalsTop + 16} left={530} width={200} bold>IGST {Number(challanDetails.gstRate || 18)}%</T>
-                <T top={totalsTop + 16} left={605} width={155} align="center">{igst.toFixed(2)}</T>
-              </>
-            ) : (
-              <>
-                <T top={totalsTop + 16} left={530} width={200} bold>CGST {Number(challanDetails.gstRate || 18) / 2}%</T>
-                <T top={totalsTop + 16} left={605} width={155} align="center">{cgst.toFixed(2)}</T>
-                <T top={totalsTop + 32} left={530} width={200} bold>SGST {Number(challanDetails.gstRate || 18) / 2}%</T>
-                <T top={totalsTop + 32} left={605} width={155} align="center">{sgst.toFixed(2)}</T>
-              </>
-            )}
-            <T top={totalsTop + (gstType === 'cgst_sgst' ? 48 : 32)} left={530} width={200} bold>Net Amount</T>
-            <T top={totalsTop + (gstType === 'cgst_sgst' ? 48 : 32)} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
-          </>
-        )}
-      </div>
-
-      {/* PAGE 2 */}
-      {page2Rows.length > 0 && (
-        <div className="challan-page relative w-[800px] shadow-2xl bg-white">
-          <img src="/539_page-0002.jpg" alt="Challan Page 2" className="block w-full" />
-          {Array.from({ length: 13 }).map((_, i) => {
-            const m = page2Rows[i];
-            const top = 120 + i * rowHeight;
-            const unitCost = m ? Number(m.purchaseCost) || 0 : '';
-            const totalCost = m ? Number(m.totalCost) || 0 : '';
-            return (
-              <React.Fragment key={i}>
-                <T top={top} left={88}  width={55}  align="center">{m ? 12 + i + 1 : ''}</T>
-                <T top={top} left={150} width={280}>{m ? (m.machineTypeId?.name || '-') : ''}</T>
-                <T top={top} left={438} width={95}  align="center">{m ? m.quantity : ''}</T>
-                <T top={top} left={58}  width={80}  align="center">{m ? unitCost : ''}</T>
-                <T top={top} left={605} width={155} align="center">{m ? totalCost : ''}</T>
-              </React.Fragment>
-            );
-          })}
-          {/* Totals on page 2 */}
-          {(() => {
-            const lastTop = 120 + (page2Rows.length - 1) * rowHeight;
-            const tTop = lastTop + rowHeight + 4;
-            return (
-              <>
-                <T top={tTop}      left={438} width={95}  align="center">{totalQty}</T>
-                <T top={tTop}      left={605} width={155} align="center">{totalAmt.toFixed(2)}</T>
-                {gstType === 'igst' ? (
-                  <>
-                    <T top={tTop + 16} left={150} width={200}>IGST {Number(challanDetails.gstRate || 18)}%</T>
-                    <T top={tTop + 16} left={605} width={155} align="center">{igst.toFixed(2)}</T>
-                    <T top={tTop + 32} left={150} width={200}>Net Amount</T>
-                    <T top={tTop + 32} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
-                  </>
-                ) : (
-                  <>
-                    <T top={tTop + 16} left={150} width={200}>CGST {Number(challanDetails.gstRate || 18) / 2}%</T>
-                    <T top={tTop + 16} left={605} width={155} align="center">{cgst.toFixed(2)}</T>
-                    <T top={tTop + 32} left={150} width={200}>SGST {Number(challanDetails.gstRate || 18) / 2}%</T>
-                    <T top={tTop + 32} left={605} width={155} align="center">{sgst.toFixed(2)}</T>
-                    <T top={tTop + 48} left={150} width={200}>Net Amount</T>
-                    <T top={tTop + 48} left={605} width={155} align="center">{netAmount.toFixed(2)}</T>
-                  </>
-                )}
-              </>
-            );
-          })()}
+      <div className="challan-page w-[800px] shadow-2xl bg-white p-10 text-black font-sans text-sm">
+        
+        {/* Header */}
+        <div className="text-center mb-6 border-b-2 border-gray-800 pb-4">
+          <h1 className="text-2xl font-bold uppercase">ARUN SOIL LAB PRIVATE LIMITED</h1>
+          <h2 className="text-lg font-semibold uppercase mt-1">Delivery Challan</h2>
         </div>
-      )}
 
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-8 mb-8">
+          {/* Left Column (Consignor/Consignee) */}
+          <div className="flex flex-col gap-6">
+            <div>
+              <p className="font-bold text-gray-700 border-b border-gray-300 mb-2">Consignor</p>
+              <p className="font-semibold">{challanDetails.consignorName || 'Arun Soil Lab'}</p>
+              <p className="whitespace-pre-wrap">{challanDetails.consignorAddress || ''}</p>
+              {challanDetails.consignorPincode && <p>Pin: {challanDetails.consignorPincode}</p>}
+              {challanDetails.consignorGstin && <p>GSTIN: {challanDetails.consignorGstin}</p>}
+              {challanDetails.consignorContact && <p>Contact: {challanDetails.consignorContact}</p>}
+            </div>
+            <div>
+              <p className="font-bold text-gray-700 border-b border-gray-300 mb-2">Consignee</p>
+              <p className="font-semibold">{challanDetails.consigneeName || incharge?.name || ''}</p>
+              <p className="whitespace-pre-wrap">{challanDetails.consigneeAddress || ''}</p>
+              {challanDetails.consigneePincode && <p>Pin: {challanDetails.consigneePincode}</p>}
+              {challanDetails.consigneeGstin && <p>GSTIN: {challanDetails.consigneeGstin}</p>}
+              {challanDetails.consigneeContact && <p>Contact: {challanDetails.consigneeContact}</p>}
+            </div>
+          </div>
+
+          {/* Right Column (Details) */}
+          <div>
+            <p className="font-bold text-gray-700 border-b border-gray-300 mb-2">Challan Details</p>
+            <table className="w-full text-left border-collapse">
+              <tbody>
+                <tr><td className="py-1 font-semibold w-1/2">Challan No:</td><td className="py-1">{challanNo}</td></tr>
+                <tr><td className="py-1 font-semibold">Date of issue:</td><td className="py-1">{today}</td></tr>
+                {challanDetails.suppliersRef && <tr><td className="py-1 font-semibold">Supplier's Ref:</td><td className="py-1">{challanDetails.suppliersRef}</td></tr>}
+                {challanDetails.othersRef && <tr><td className="py-1 font-semibold">Other Ref:</td><td className="py-1">{challanDetails.othersRef}</td></tr>}
+                {challanDetails.buyersOrderNo && <tr><td className="py-1 font-semibold">Buyer's Order No:</td><td className="py-1">{challanDetails.buyersOrderNo}</td></tr>}
+                {challanDetails.buyersOrderDate && <tr><td className="py-1 font-semibold">Order Date:</td><td className="py-1">{challanDetails.buyersOrderDate}</td></tr>}
+                {challanDetails.dispatchDocNo && <tr><td className="py-1 font-semibold">Dispatch Doc No:</td><td className="py-1">{challanDetails.dispatchDocNo}</td></tr>}
+                {challanDetails.dispatchThrough && <tr><td className="py-1 font-semibold">Dispatch Through:</td><td className="py-1">{challanDetails.dispatchThrough}</td></tr>}
+                {challanDetails.destination && <tr><td className="py-1 font-semibold">Destination:</td><td className="py-1">{challanDetails.destination}</td></tr>}
+                {challanDetails.vehicle && <tr><td className="py-1 font-semibold">Vehicle:</td><td className="py-1">{challanDetails.vehicle}</td></tr>}
+                {challanDetails.driverName && <tr><td className="py-1 font-semibold">Driver Name:</td><td className="py-1">{challanDetails.driverName}</td></tr>}
+                {challanDetails.driverContact && <tr><td className="py-1 font-semibold">Driver Contact:</td><td className="py-1">{challanDetails.driverContact}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Items Table */}
+        <table className="w-full text-left border-collapse border border-gray-400 mb-6">
+          <thead>
+            <tr className="bg-gray-100 border-b border-gray-400">
+              <th className="py-2 px-3 border-r border-gray-400 font-bold">Sr. No.</th>
+              <th className="py-2 px-3 border-r border-gray-400 font-bold">Equipments</th>
+              <th className="py-2 px-3 border-r border-gray-400 font-bold text-center">Quantity</th>
+              <th className="py-2 px-3 border-r border-gray-400 font-bold text-right">Rate (Rs.)</th>
+              <th className="py-2 px-3 font-bold text-right">Amount (Rs.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groupedMachines.map((m, i) => (
+              <tr key={i} className="border-b border-gray-300">
+                <td className="py-2 px-3 border-r border-gray-300 text-center">{i + 1}</td>
+                <td className="py-2 px-3 border-r border-gray-300">{m.machineTypeId?.name || '-'}</td>
+                <td className="py-2 px-3 border-r border-gray-300 text-center">{m.quantity}</td>
+                <td className="py-2 px-3 border-r border-gray-300 text-right">{Number(m.purchaseCost || 0).toFixed(2)}</td>
+                <td className="py-2 px-3 text-right">{Number(m.totalCost || 0).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Totals */}
+        <div className="flex justify-end">
+          <table className="w-1/2 text-left border-collapse">
+            <tbody>
+              <tr>
+                <td className="py-1 font-bold">Total Quantity:</td>
+                <td className="py-1 text-right">{totalQty}</td>
+              </tr>
+              <tr>
+                <td className="py-1 font-bold">Total Amount:</td>
+                <td className="py-1 text-right">{totalAmt.toFixed(2)}</td>
+              </tr>
+              
+              {gstType === 'igst' ? (
+                <tr>
+                  <td className="py-1 font-bold border-b border-gray-300 pb-2">IGST ({Number(challanDetails.gstRate || 18)}%):</td>
+                  <td className="py-1 text-right border-b border-gray-300 pb-2">{igst.toFixed(2)}</td>
+                </tr>
+              ) : gstType === 'cgst_sgst' ? (
+                <>
+                  <tr>
+                    <td className="py-1 font-bold">CGST ({Number(challanDetails.gstRate || 18) / 2}%):</td>
+                    <td className="py-1 text-right">{cgst.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 font-bold border-b border-gray-300 pb-2">SGST ({Number(challanDetails.gstRate || 18) / 2}%):</td>
+                    <td className="py-1 text-right border-b border-gray-300 pb-2">{sgst.toFixed(2)}</td>
+                  </tr>
+                </>
+              ) : null}
+              
+              <tr>
+                <td className="py-3 font-bold text-lg">Net Amount:</td>
+                <td className="py-3 text-right font-bold text-lg">{netAmount.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
     </div>
   );
 });
