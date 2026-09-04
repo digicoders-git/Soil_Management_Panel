@@ -186,7 +186,7 @@ const InchargeDetails = () => {
     setIsGeneratingPdf(true);
     try {
       const { default: jsPDF } = await import('jspdf');
-      await import('jspdf-autotable');
+      const { default: autoTable } = await import('jspdf-autotable');
 
       const cd = challanDetails;
       const today = cd.challanDate || new Date().toLocaleDateString('en-IN');
@@ -260,7 +260,7 @@ const InchargeDetails = () => {
         ]);
       });
 
-      pdf.autoTable({
+      autoTable(pdf, {
         startY: 100,
         head: [tableColumn],
         body: tableRows,
@@ -269,7 +269,7 @@ const InchargeDetails = () => {
         styles: { textColor: [0, 0, 0] }
       });
 
-      let finalY = pdf.lastAutoTable.finalY;
+      let finalY = pdf.lastAutoTable.finalY || 100;
 
       pdf.setFont('helvetica', 'bold');
       pdf.text('Totals', 14, finalY + 10);
