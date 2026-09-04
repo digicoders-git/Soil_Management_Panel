@@ -200,8 +200,8 @@ const InchargeDetails = () => {
           return acc;
         }, {})
       );
-      const page1Rows = grouped.slice(0, 12);
-      const page2Rows = grouped.slice(12);
+      const page1Rows = grouped.slice(0, 25);
+      const page2Rows = grouped.slice(25);
       const rowStartY = 432;
       const rowHeight = 18;
 
@@ -288,17 +288,17 @@ const InchargeDetails = () => {
 
       if (page2Rows.length > 0) {
         const page2Texts = page2Rows.flatMap((m, i) => {
-          const y = 120 + i * rowHeight;
+          const y = 250 + i * rowHeight;
           return [
-            { x: 88,  y, text: 12 + i + 1, align: 'center' },
-            { x: 150, y, text: m.machineTypeId?.name || '-' },
-            { x: 438, y, text: m.quantity, align: 'center' },
-            { x: 58,  y, text: m.purchaseCost || '', align: 'center' },
-            { x: 605, y, text: m.totalCost || '', align: 'center' },
+            { x: 115, y, text: 25 + i + 1, align: 'center' },
+            { x: 152, y, text: m.machineTypeId?.name || '-' },
+            { x: 447, y, text: m.quantity, align: 'center' },
+            { x: 572, y, text: m.purchaseCost || '', align: 'center' },
+            { x: 682, y, text: m.totalCost || '', align: 'center' },
           ];
         });
         // totals on page 2
-        const p2TotalsY = 120 + page2Rows.length * rowHeight + 4;
+        const p2TotalsY = 250 + page2Rows.length * rowHeight + 4;
         page2Texts.push(...totalsTexts(p2TotalsY));
         const canvas2 = await renderPageToCanvas('/539_page-0002.jpg', page2Texts);
         pdf.addPage([canvas2.width, canvas2.height]);
@@ -317,32 +317,20 @@ const InchargeDetails = () => {
   const handleAssignMachine = async (e) => {
     e.preventDefault();
     try {
-      if (assignForm.unitIds.length === 0) return alert('Select at least one unit');
+      if (assignForm.unitIds.length === 0) return alert('Select at least one machine type');
 
-      let finalUnitIds = [...assignForm.unitIds];
+      let finalUnitIds = [];
 
-      // Auto-fill logic if user selects exactly 1 unit and specifies a quantity > 1
-      if (assignForm.unitIds.length === 1 && assignForm.quantity > 1) {
-        const selectedUnitId = assignForm.unitIds[0];
-        const selectedUnit = availableMachines.find(m => m._id === selectedUnitId);
+      for (const typeId of assignForm.unitIds) {
+        const availableOfThisType = availableMachines.filter(m => (m.machineTypeId?._id || m.machineTypeId) === typeId);
         
-        if (selectedUnit) {
-          const typeId = selectedUnit.machineTypeId?._id || selectedUnit.machineTypeId;
-          // Find identical available machines (same type) excluding the one already selected
-          const sameTypeMachines = availableMachines.filter(m => 
-            (m.machineTypeId?._id || m.machineTypeId) === typeId && 
-            m._id !== selectedUnitId
-          );
-          
-          const neededAdditional = assignForm.quantity - 1;
-          if (sameTypeMachines.length < neededAdditional) {
-            return alert(`Not enough units available! You need ${neededAdditional} more of this type, but only ${sameTypeMachines.length} are available.`);
-          }
-          
-          // Grab the required number of additional units
-          const additionalIds = sameTypeMachines.slice(0, neededAdditional).map(m => m._id);
-          finalUnitIds = [...finalUnitIds, ...additionalIds];
+        if (availableOfThisType.length < assignForm.quantity) {
+          const typeName = availableOfThisType[0]?.machineTypeId?.name || 'Unknown Type';
+          return alert(`Not enough units available for ${typeName}! You requested ${assignForm.quantity}, but only ${availableOfThisType.length} are available.`);
         }
+        
+        const selectedIds = availableOfThisType.slice(0, assignForm.quantity).map(m => m._id);
+        finalUnitIds.push(...selectedIds);
       }
 
       await Promise.all(finalUnitIds.map(unitId =>
@@ -564,37 +552,63 @@ const InchargeDetails = () => {
               />
               <label className="block text-sm font-medium text-gray-700 mb-3">Select Units to Assign</label>
               <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar border border-gray-200 rounded-lg p-3 bg-gray-50">
-                {availableMachines.filter(m =>
-                  m.machineTypeId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  m.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-                ).length > 0 ? availableMachines.filter(m =>
-                  m.machineTypeId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  m.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-                ).map(m => (
-                  <label key={m._id} className={`flex items-start p-3 rounded-lg border cursor-pointer transition-colors ${assignForm.unitIds.includes(m._id) ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                    <div className="flex-shrink-0 mt-0.5">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-indigo-600 border-gray-300 rounded cursor-pointer"
-                        checked={assignForm.unitIds.includes(m._id)}
-                        onChange={(e) => {
-                          const newSelection = e.target.checked
-                            ? [...assignForm.unitIds, m._id]
-                            : assignForm.unitIds.filter(uid => uid !== m._id);
-                          setAssignForm({ ...assignForm, unitIds: newSelection });
-                        }}
-                      />
-                    </div>
-                    <div className="ml-3 flex-1">
-                      <p className={`text-sm font-medium ${assignForm.unitIds.includes(m._id) ? 'text-indigo-900' : 'text-gray-900'}`}>{m.machineTypeId?.name}</p>
-                      <p className={`text-xs ${assignForm.unitIds.includes(m._id) ? 'text-indigo-700' : 'text-gray-500'}`}>
-                        Serial: <span className="font-mono">{m.serialNumber}</span> • Cond: <span className="capitalize">{m.condition}</span>
-                      </p>
-                    </div>
-                  </label>
-                )) : (
-                  <p className="text-sm text-gray-500 text-center py-4">No matching machines found.</p>
-                )}
+                {
+                  Object.values(availableMachines.reduce((acc, m) => {
+                    const key = m.machineTypeId?._id || m.machineTypeId;
+                    if (!acc[key]) {
+                      acc[key] = {
+                        typeId: key,
+                        name: m.machineTypeId?.name || 'Unknown',
+                        count: 1
+                      };
+                    } else {
+                      acc[key].count += 1;
+                    }
+                    return acc;
+                  }, {}))
+                  .filter(group => group.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .length > 0 ? (
+                    Object.values(availableMachines.reduce((acc, m) => {
+                      const key = m.machineTypeId?._id || m.machineTypeId;
+                      if (!acc[key]) {
+                        acc[key] = {
+                          typeId: key,
+                          name: m.machineTypeId?.name || 'Unknown',
+                          count: 1
+                        };
+                      } else {
+                        acc[key].count += 1;
+                      }
+                      return acc;
+                    }, {}))
+                    .filter(group => group.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map(group => (
+                      <label key={group.typeId} className={`flex items-start p-3 rounded-lg border cursor-pointer transition-colors ${assignForm.unitIds.includes(group.typeId) ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                        <div className="flex-shrink-0 mt-0.5">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 text-indigo-600 border-gray-300 rounded cursor-pointer"
+                            checked={assignForm.unitIds.includes(group.typeId)}
+                            onChange={(e) => {
+                              const newSelection = e.target.checked
+                                ? [...assignForm.unitIds, group.typeId]
+                                : assignForm.unitIds.filter(uid => uid !== group.typeId);
+                              setAssignForm({ ...assignForm, unitIds: newSelection });
+                            }}
+                          />
+                        </div>
+                        <div className="ml-3 flex-1">
+                          <p className={`text-sm font-medium ${assignForm.unitIds.includes(group.typeId) ? 'text-indigo-900' : 'text-gray-900'}`}>{group.name}</p>
+                          <p className={`text-xs ${assignForm.unitIds.includes(group.typeId) ? 'text-indigo-700' : 'text-gray-500'}`}>
+                            Available in stock: <span className="font-semibold">{group.count}</span>
+                          </p>
+                        </div>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">No matching machines found.</p>
+                  )
+                }
               </div>
             </div>
           <div className="mb-4">
