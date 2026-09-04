@@ -420,8 +420,8 @@ const InchargeDetails = () => {
 
   const machineColumns = [
     { key: 'machineTypeId', label: 'Stock Type', render: (val) => val?.name || '-' },
-    { key: 'quantity', label: 'Qty', render: (val) => <span className="font-semibold text-indigo-600">{val}</span> },
-    { key: 'serialNumbers', label: 'Serial Nos.', render: (val) => <span className="text-xs font-mono text-gray-500">{Array.isArray(val) ? val.join(', ') : val}</span> },
+    { key: 'quantity', label: 'Qty', render: (val, obj) => <span className="font-semibold text-indigo-600">{val || obj.quantity || 1}</span> },
+    { key: 'serialNumber', label: 'Serial No.', render: (val, obj) => <span className="text-xs font-mono text-gray-500">{val || obj.serialNumbers?.join(', ') || '-'}</span> },
     { key: 'currentSiteId', label: 'Current Site', render: (val) => val?.name || <span className="text-gray-400">Not at site</span> },
     { key: 'condition', label: 'Condition' },
     { key: 'status', label: 'Status', render: (val) => <StatusBadge status={val} /> },
