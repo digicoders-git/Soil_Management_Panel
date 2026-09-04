@@ -186,6 +186,7 @@ const InchargeDetails = () => {
     setIsGeneratingPdf(true);
     try {
       const { default: jsPDF } = await import('jspdf');
+      await import('jspdf-autotable');
 
       const cd = challanDetails;
       const today = cd.challanDate || new Date().toLocaleDateString('en-IN');
@@ -200,10 +201,6 @@ const InchargeDetails = () => {
           return acc;
         }, {})
       );
-      const page1Rows = grouped.slice(0, 25);
-      const page2Rows = grouped.slice(25);
-      const rowStartY = 432;
-      const rowHeight = 18;
 
       const totalQty  = grouped.reduce((s, m) => s + m.quantity, 0);
       const totalAmt  = grouped.reduce((s, m) => s + (m.totalCost || 0), 0);
@@ -214,95 +211,85 @@ const InchargeDetails = () => {
       const igst = gstType === 'igst' ? Math.round(totalAmt * gstRate * 100) / 100 : 0;
       const netAmount = Math.round((totalAmt + (gstType === 'none' ? 0 : gstType === 'cgst_sgst' ? cgst + sgst : igst)) * 100) / 100;
 
-      const totalsTexts = (baseY) => [
-        { x: 447, y: baseY, text: totalQty, align: 'center' },
-        { x: 682, y: baseY, text: totalAmt.toFixed(2), align: 'center' },
-        ...(gstType === 'igst' ? [
-          { x: 152, y: baseY + 16, text: `IGST ${cd.gstRate || 18}%` },
-          { x: 682, y: baseY + 16, text: igst.toFixed(2), align: 'center' },
-          { x: 152, y: baseY + 32, text: 'Net Amount' },
-          { x: 682, y: baseY + 32, text: netAmount.toFixed(2), align: 'center' },
-        ] : gstType === 'cgst_sgst' ? [
-          { x: 152, y: baseY + 16, text: `CGST ${Number(cd.gstRate || 18) / 2}%` },
-          { x: 682, y: baseY + 16, text: cgst.toFixed(2), align: 'center' },
-          { x: 152, y: baseY + 32, text: `SGST ${Number(cd.gstRate || 18) / 2}%` },
-          { x: 682, y: baseY + 32, text: sgst.toFixed(2), align: 'center' },
-          { x: 152, y: baseY + 48, text: 'Net Amount' },
-          { x: 682, y: baseY + 48, text: netAmount.toFixed(2), align: 'center' },
-        ] : [
-          { x: 152, y: baseY + 16, text: 'Net Amount' },
-          { x: 682, y: baseY + 16, text: netAmount.toFixed(2), align: 'center' },
-        ]),
-      ];
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.width;
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('ARUN SOIL LAB PRIVATE LIMITED', pageWidth / 2, 20, { align: 'center' });
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('DELIVERY CHALLAN', pageWidth / 2, 28, { align: 'center' });
 
-      const page1Texts = [
-        { x: 150, y: 265, text: cd.consignorName || '' },
-        { x: 150, y: 280, text: cd.consignorAddress || '', wrap: true },
-        { x: 150, y: 315, text: cd.consignorPincode || '' },
-        { x: 150, y: 332, text: cd.consignorGstin || '' },
-        { x: 150, y: 350, text: cd.consignorContact || '' },
-        { x: 150, y: 370, text: cd.consigneeName || incharge?.name || '' },
-        { x: 150, y: 385, text: cd.consigneeAddress || '' },
-        { x: 150, y: 400, text: cd.consigneePincode || '' },
-        { x: 150, y: 415, text: cd.consigneeGstin || '' },
-        { x: 150, y: 425, text: cd.consigneeContact || '' },
-        { x: 520, y: 265, text: challanNo },
-        { x: 645, y: 274, text: today },
-        { x: 500, y: 293, text: cd.suppliersRef || '' },
-        { x: 645, y: 300, text: cd.othersRef || '' },
-        { x: 505, y: 333, text: cd.buyersOrderNo || '' },
-        { x: 645, y: 333, text: cd.buyersOrderDate || '' },
-        { x: 515, y: 372, text: cd.dispatchDocNo || '' },
-        { x: 520, y: 400, text: cd.dispatchThrough || '' },
-        { x: 645, y: 400, text: cd.destination || '' },
-        { x: 460, y: 424, text: cd.vehicle || '' },
-        { x: 480, y: 442, text: cd.driverName || '' },
-        { x: 495, y: 460, text: cd.driverContact || '' },
-        ...page1Rows.flatMap((m, i) => {
-          const y = rowStartY + i * rowHeight + 65;
-          const unitCost = Number(m.purchaseCost) || 0;
-          const totalCost = Number(m.totalCost) || 0;
-          return [
-            { x: 115, y, text: i + 1, align: 'center' },
-            { x: 152, y, text: m.machineTypeId?.name || '-' },
-            { x: 447, y, text: m.quantity, align: 'center' },
-            { x: 572, y, text: unitCost || '-', align: 'center' },
-            { x: 682, y, text: totalCost || '-', align: 'center' },
-          ];
-        }),
-        // totals on page 1 only if no page 2
-        ...(page2Rows.length === 0 ? totalsTexts(rowStartY + page1Rows.length * rowHeight + 65 + 4) : []),
-      ];
+      pdf.setFontSize(10);
+      pdf.text('Consignor:', 14, 40);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(cd.consignorName || 'Arun Soil Lab', 14, 45);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(cd.consignorAddress || '', 14, 50, { maxWidth: 80 });
+      
+      pdf.text('Consignee:', 14, 75);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(cd.consigneeName || incharge?.name || '', 14, 80);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(cd.consigneeAddress || '', 14, 85, { maxWidth: 80 });
 
-      const canvas1 = await renderPageToCanvas('/539_page-0001.jpg', page1Texts);
-      const imgData1 = canvas1.toDataURL('image/jpeg', 1.0);
+      const rightX = 120;
+      pdf.text(`Challan No: ${challanNo}`, rightX, 40);
+      pdf.text(`Date of issue: ${today}`, rightX, 45);
+      pdf.text(`Supplier's Ref: ${cd.suppliersRef || ''}`, rightX, 50);
+      pdf.text(`Other Ref: ${cd.othersRef || ''}`, rightX, 55);
+      pdf.text(`Buyer's Order No: ${cd.buyersOrderNo || ''}`, rightX, 60);
+      pdf.text(`Order Date: ${cd.buyersOrderDate || ''}`, rightX, 65);
+      pdf.text(`Dispatch Doc No: ${cd.dispatchDocNo || ''}`, rightX, 70);
+      pdf.text(`Dispatch Through: ${cd.dispatchThrough || ''}`, rightX, 75);
+      pdf.text(`Destination: ${cd.destination || ''}`, rightX, 80);
 
-      // PDF size = exact canvas size (1px = 1pt)
-      const pdf = new jsPDF({
-        orientation: canvas1.width > canvas1.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas1.width, canvas1.height],
-        hotfixes: ['px_scaling'],
+      const tableColumn = ["Sr. No.", "Equipments", "Quantity", "Rate", "Amount"];
+      const tableRows = [];
+
+      grouped.forEach((m, i) => {
+        const unitCost = Number(m.purchaseCost) || 0;
+        const totalCost = Number(m.totalCost) || 0;
+        tableRows.push([
+          i + 1,
+          m.machineTypeId?.name || '-',
+          m.quantity,
+          unitCost.toFixed(2),
+          totalCost.toFixed(2)
+        ]);
       });
-      pdf.addImage(imgData1, 'JPEG', 0, 0, canvas1.width, canvas1.height);
 
-      if (page2Rows.length > 0) {
-        const page2Texts = page2Rows.flatMap((m, i) => {
-          const y = 250 + i * rowHeight;
-          return [
-            { x: 115, y, text: 25 + i + 1, align: 'center' },
-            { x: 152, y, text: m.machineTypeId?.name || '-' },
-            { x: 447, y, text: m.quantity, align: 'center' },
-            { x: 572, y, text: m.purchaseCost || '', align: 'center' },
-            { x: 682, y, text: m.totalCost || '', align: 'center' },
-          ];
-        });
-        // totals on page 2
-        const p2TotalsY = 250 + page2Rows.length * rowHeight + 4;
-        page2Texts.push(...totalsTexts(p2TotalsY));
-        const canvas2 = await renderPageToCanvas('/539_page-0002.jpg', page2Texts);
-        pdf.addPage([canvas2.width, canvas2.height]);
-        pdf.addImage(canvas2.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, canvas2.width, canvas2.height);
+      pdf.autoTable({
+        startY: 100,
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+        styles: { textColor: [0, 0, 0] }
+      });
+
+      let finalY = pdf.lastAutoTable.finalY;
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Totals', 14, finalY + 10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Total Quantity: ${totalQty}`, 14, finalY + 15);
+      pdf.text(`Total Amount: ${totalAmt.toFixed(2)}`, 14, finalY + 20);
+      
+      let nextY = finalY + 25;
+      if (gstType === 'igst') {
+        pdf.text(`IGST (${cd.gstRate || 18}%): ${igst.toFixed(2)}`, 14, nextY);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Net Amount: ${netAmount.toFixed(2)}`, 14, nextY + 5);
+      } else if (gstType === 'cgst_sgst') {
+        pdf.text(`CGST (${Number(cd.gstRate || 18) / 2}%): ${cgst.toFixed(2)}`, 14, nextY);
+        pdf.text(`SGST (${Number(cd.gstRate || 18) / 2}%): ${sgst.toFixed(2)}`, 14, nextY + 5);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Net Amount: ${netAmount.toFixed(2)}`, 14, nextY + 10);
+      } else {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Net Amount: ${netAmount.toFixed(2)}`, 14, nextY);
       }
 
       pdf.save(`challan-${challanNo}.pdf`);
